@@ -602,7 +602,7 @@
               <div class="control-title">Track offset</div>
               <div class="slider-row">
                 <input id="left-offset" type="range" min="-2" max="2" step="0.05" value="0">
-                <input id="left-offset-value" class="offset-input" type="number" step="0.01" value="0">
+                <input id="left-offset-value" class="offset-input" type="text" inputmode="decimal" value="0">
               </div>
               <div class="slider-hint">Negative leads, positive lags.</div>
               <div class="control-title">Clip range</div>
@@ -677,7 +677,7 @@
               <div class="control-title">Track offset</div>
               <div class="slider-row">
                 <input id="right-offset" type="range" min="-2" max="2" step="0.05" value="0">
-                <input id="right-offset-value" class="offset-input" type="number" step="0.01" value="0">
+                <input id="right-offset-value" class="offset-input" type="text" inputmode="decimal" value="0">
               </div>
               <div class="slider-hint">Negative leads, positive lags.</div>
               <div class="control-title">Clip range</div>
@@ -929,8 +929,7 @@
     }
 
     function formatOffset(value) {
-      var sign = value > 0 ? "+" : "";
-      return sign + value.toFixed(2);
+      return value.toFixed(2);
     }
 
     function updateOffsetInputs() {
@@ -1082,7 +1081,21 @@
       var otherSeg = masterSide === "right" ? leftSeg : rightSeg;
       var otherOffset = masterSide === "right" ? leftOffsetVal : rightOffsetValue;
       var otherLen = otherSeg.length;
-      var otherPadActive = otherLen > 0 ? masterTime >= otherLen : true;
+      var otherRelative = masterTime + otherOffset;
+      var otherPadActive = true;
+      var desiredOther = otherSeg.start;
+      if (otherLen > 0) {
+        if (otherRelative < 0) {
+          desiredOther = otherSeg.start;
+          otherPadActive = true;
+        } else if (otherRelative >= otherLen) {
+          desiredOther = Math.max(otherSeg.start, otherSeg.end - 0.02);
+          otherPadActive = true;
+        } else {
+          desiredOther = otherSeg.start + otherRelative;
+          otherPadActive = false;
+        }
+      }
 
       var rightPadActive = masterSide === "right" ? false : otherPadActive;
       var leftPadActive = masterSide === "left" ? false : otherPadActive;
@@ -1090,9 +1103,10 @@
       rightPad.classList.toggle("visible", rightPadActive);
       leftPad.classList.toggle("visible", leftPadActive);
 
-      if (!otherPadActive && otherLen > 0) {
-        var desiredOther = otherSeg.start + wrapTime(masterTime + otherOffset, otherLen);
-        if (force || Math.abs(otherVideo.currentTime - desiredOther) > 0.08) {
+      if (otherLen > 0) {
+        var drift = Math.abs(otherVideo.currentTime - desiredOther);
+        var driftThreshold = 0.12;
+        if (force || drift > driftThreshold) {
           otherVideo.currentTime = desiredOther;
         }
       }
@@ -1101,8 +1115,12 @@
         if (masterVideo.paused) {
           masterVideo.play().catch(function () {});
         }
-        if (!otherVideo.paused) {
-          otherVideo.pause();
+        if (otherPadActive) {
+          if (!otherVideo.paused) {
+            otherVideo.pause();
+          }
+        } else if (otherVideo.paused) {
+          otherVideo.play().catch(function () {});
         }
       }
 
@@ -1711,6 +1729,8 @@
       audioUnlocked = true;
       var rightEnabled = isAudioEnabled(rightAudio);
       var leftEnabled = isAudioEnabled(leftAudio);
+      var masterSide = getMasterSide();
+      var masterVideo = masterSide === "right" ? v : v2;
       updateAudioState(prevRightPadActive, prevLeftPadActive);
       updateMuteOverlay();
       dbg("unmuteEnabled", {
@@ -1719,14 +1739,15 @@
         rightMuted: v.muted,
         leftMuted: v2.muted
       });
-      var playPromise = Promise.all([v.play(), v2.play()]);
-      if (playPromise && playPromise.catch) {
-        playPromise.catch(function () {
+      playMaster();
+      var unlockPromise = masterVideo.play();
+      if (unlockPromise && unlockPromise.catch) {
+        unlockPromise.catch(function () {
           audioUnlocked = false;
           updateAudioState(prevRightPadActive, prevLeftPadActive);
+          updateMuteOverlay();
         });
       }
-      playMaster();
     }
 
     muteOverlay.addEventListener("click", unmuteEnabled);
