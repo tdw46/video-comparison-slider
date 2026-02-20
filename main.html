@@ -238,6 +238,32 @@
       font-weight: 600;
     }
 
+    .control-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .settings-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: none;
+      background: #1e1e1e;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .settings-toggle svg {
+      width: 16px;
+      height: 16px;
+    }
+
     .control-fields {
       display: grid;
       gap: 0.65rem;
@@ -305,6 +331,45 @@
       display: none;
     }
 
+    .control-settings {
+      grid-column: 1 / -1;
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 180ms ease, opacity 180ms ease;
+    }
+
+    .control-card.expanded .control-settings {
+      max-height: 140px;
+      opacity: 1;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+    }
+
+    .slider-value {
+      font-size: 0.85rem;
+      color: var(--muted);
+      min-width: 60px;
+      text-align: right;
+    }
+
+    .slider-hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+    }
+
     @media (max-width: 980px) {
       .layout {
         grid-template-columns: 1fr;
@@ -360,7 +425,14 @@
               <video id="left-thumb" muted playsinline preload="metadata"></video>
             </div>
             <div class="control-fields">
-              <div class="control-title">Left video</div>
+              <div class="control-title-row">
+                <div class="control-title">Left video</div>
+                <button class="settings-toggle" type="button" aria-label="Left video settings" aria-expanded="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M19.4 13.5c.04-.33.06-.67.06-1.02s-.02-.69-.06-1.02l2.02-1.57a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.38.96a7.3 7.3 0 0 0-1.76-1.02l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.62.24-1.22.57-1.76 1.02l-2.38-.96a.5.5 0 0 0-.6.22L2.5 8.75a.5.5 0 0 0 .12.64l2.02 1.57c-.04.33-.06.67-.06 1.02s.02.69.06 1.02L2.62 14.6a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.44.34.7.22l2.38-.96c.54.44 1.14.78 1.76 1.02l.36 2.54c.04.24.26.42.5.42h3.84c.24 0 .46-.18.5-.42l.36-2.54c.62-.24 1.22-.57 1.76-1.02l2.38.96c.26.12.56.02.7-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.02-1.57zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z" fill="currentColor"></path>
+                  </svg>
+                </button>
+              </div>
               <div class="control-actions">
                 <label class="file-button">
                   <input id="left-file" type="file" accept="video/*">
@@ -378,13 +450,28 @@
                 </button>
               </div>
             </div>
+            <div class="control-settings">
+              <div class="control-title">Track offset</div>
+              <div class="slider-row">
+                <input id="left-offset" type="range" min="-2" max="2" step="0.05" value="0">
+                <span id="left-offset-value" class="slider-value">+0.00s</span>
+              </div>
+              <div class="slider-hint">Negative leads, positive lags.</div>
+            </div>
           </div>
           <div class="control-card">
             <div class="thumb">
               <video id="right-thumb" muted playsinline preload="metadata"></video>
             </div>
             <div class="control-fields">
-              <div class="control-title">Right video</div>
+              <div class="control-title-row">
+                <div class="control-title">Right video</div>
+                <button class="settings-toggle" type="button" aria-label="Right video settings" aria-expanded="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M19.4 13.5c.04-.33.06-.67.06-1.02s-.02-.69-.06-1.02l2.02-1.57a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.38.96a7.3 7.3 0 0 0-1.76-1.02l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.62.24-1.22.57-1.76 1.02l-2.38-.96a.5.5 0 0 0-.6.22L2.5 8.75a.5.5 0 0 0 .12.64l2.02 1.57c-.04.33-.06.67-.06 1.02s.02.69.06 1.02L2.62 14.6a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.44.34.7.22l2.38-.96c.54.44 1.14.78 1.76 1.02l.36 2.54c.04.24.26.42.5.42h3.84c.24 0 .46-.18.5-.42l.36-2.54c.62-.24 1.22-.57 1.76-1.02l2.38.96c.26.12.56.02.7-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.02-1.57zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z" fill="currentColor"></path>
+                  </svg>
+                </button>
+              </div>
               <div class="control-actions">
                 <label class="file-button">
                   <input id="right-file" type="file" accept="video/*">
@@ -401,6 +488,14 @@
                   </svg>
                 </button>
               </div>
+            </div>
+            <div class="control-settings">
+              <div class="control-title">Track offset</div>
+              <div class="slider-row">
+                <input id="right-offset" type="range" min="-2" max="2" step="0.05" value="0">
+                <span id="right-offset-value" class="slider-value">+0.00s</span>
+              </div>
+              <div class="slider-hint">Negative leads, positive lags.</div>
             </div>
           </div>
         </div>
@@ -419,6 +514,10 @@
     var leftThumb = document.getElementById("left-thumb");
     var rightThumb = document.getElementById("right-thumb");
     var muteOverlay = document.getElementById("mute-overlay");
+    var leftOffset = document.getElementById("left-offset");
+    var rightOffset = document.getElementById("right-offset");
+    var leftOffsetValue = document.getElementById("left-offset-value");
+    var rightOffsetValue = document.getElementById("right-offset-value");
 
     var leftObjectUrl = null;
     var rightObjectUrl = null;
@@ -426,6 +525,7 @@
     var glowContext = glowCanvas.getContext("2d", { willReadFrequently: true });
     var autoplayAttempted = false;
     var glowInterval = null;
+    var lastRightOffset = 0;
 
     function isAudioEnabled(button) {
       return button.dataset.enabled === "true";
@@ -448,6 +548,40 @@
       v.muted = !isAudioEnabled(rightAudio);
       v2.muted = !isAudioEnabled(leftAudio);
       updateMuteOverlay();
+    }
+
+    function formatOffset(value) {
+      var sign = value > 0 ? "+" : "";
+      return sign + value.toFixed(2) + "s";
+    }
+
+    function updateOffsetLabels() {
+      leftOffsetValue.textContent = formatOffset(parseFloat(leftOffset.value || "0"));
+      rightOffsetValue.textContent = formatOffset(parseFloat(rightOffset.value || "0"));
+    }
+
+    function wrapTime(time, duration) {
+      if (!isFinite(duration) || duration <= 0) {
+        return time;
+      }
+      var wrapped = time % duration;
+      if (wrapped < 0) {
+        wrapped += duration;
+      }
+      return wrapped;
+    }
+
+    function syncLeftToRight(force) {
+      if (v2.readyState < 1) {
+        return;
+      }
+      var leftShift = parseFloat(leftOffset.value || "0");
+      var rightShift = parseFloat(rightOffset.value || "0");
+      var baseTime = v.currentTime - rightShift;
+      var desiredLeft = wrapTime(baseTime + leftShift, v2.duration || 0);
+      if (force || Math.abs(v2.currentTime - desiredLeft) > 0.03) {
+        v2.currentTime = desiredLeft;
+      }
     }
 
     function setThumbSource(thumbVideo, src) {
@@ -590,6 +724,7 @@
 
     setAudioEnabled(leftAudio, isAudioEnabled(leftAudio));
     setAudioEnabled(rightAudio, isAudioEnabled(rightAudio));
+    updateOffsetLabels();
 
     leftAudio.addEventListener("click", function () {
       setAudioEnabled(leftAudio, !isAudioEnabled(leftAudio));
@@ -601,6 +736,32 @@
       applyAudioSettings();
     });
     applyAudioSettings();
+
+    lastRightOffset = parseFloat(rightOffset.value || "0");
+
+    document.querySelectorAll(".settings-toggle").forEach(function (toggle) {
+      toggle.addEventListener("click", function () {
+        var card = toggle.closest(".control-card");
+        var expanded = card.classList.toggle("expanded");
+        toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+      });
+    });
+
+    leftOffset.addEventListener("input", function () {
+      updateOffsetLabels();
+      syncLeftToRight(true);
+    });
+
+    rightOffset.addEventListener("input", function () {
+      var newOffset = parseFloat(rightOffset.value || "0");
+      var baseTime = v.currentTime - lastRightOffset;
+      lastRightOffset = newOffset;
+      if (v.readyState >= 1 && isFinite(v.duration) && v.duration > 0) {
+        v.currentTime = wrapTime(baseTime + newOffset, v.duration);
+      }
+      updateOffsetLabels();
+      syncLeftToRight(true);
+    });
 
     function updateMuteOverlay() {
       var rightEnabled = isAudioEnabled(rightAudio);
@@ -686,12 +847,15 @@
       updateGlowFromVideos();
       startGlowLoop(v);
       updateMuteOverlay();
+      lastRightOffset = parseFloat(rightOffset.value || "0");
+      syncLeftToRight(true);
     });
 
     v2.addEventListener("loadeddata", function () {
       setThumbSource(leftThumb, getVideoSrc(v2));
       attemptAutoplay(true);
       updateMuteOverlay();
+      syncLeftToRight(true);
     });
 
     leftThumb.addEventListener("loadeddata", function () {
@@ -704,6 +868,7 @@
 
     function video_click() {
       if (v.paused){
+        syncLeftToRight(true);
         v.play();
         v2.play(); 
       }
@@ -713,9 +878,9 @@
       }
     }
 
-    v2.addEventListener("timeupdate", function () {
-      if (v2.currentTime < 0.05 && !v2.paused && Math.abs(v.currentTime - v2.currentTime) > 0.05) {
-        v.currentTime = 0;
+    v.addEventListener("timeupdate", function () {
+      if (!v.paused) {
+        syncLeftToRight(false);
       }
     });
 
