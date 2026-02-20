@@ -2,9 +2,119 @@
 <html>
 <head>
   <style>
+    @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap");
+
+    :root {
+      --bg: #0f0f0f;
+      --panel: #181818;
+      --panel-strong: #1d1d1d;
+      --panel-weak: #2a2a2a;
+      --text: #f1f1f1;
+      --muted: #a3a3a3;
+      --accent: #ff3d3d;
+      --glow-r: 255;
+      --glow-g: 61;
+      --glow-b: 61;
+      --glow-soft: rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.18);
+      --glow-strong: rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.35);
+      --shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      background: #fff;
-      margin: 2rem;
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Manrope", "Segoe UI", sans-serif;
+      background: var(--bg);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(800px 520px at 18% 12%, var(--glow-soft), transparent 60%),
+        radial-gradient(900px 600px at 85% 18%, rgba(255, 255, 255, 0.04), transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #app {
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 1rem 1rem 2.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 1.75rem;
+      align-items: start;
+    }
+
+    .main-column {
+      min-width: 0;
+    }
+
+    .video-panel {
+      background: transparent;
+      border-radius: var(--radius);
+      padding: 0;
+      box-shadow: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .video-panel > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .mute-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.25);
+      color: #ffffff;
+      font-size: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease;
+      z-index: 5;
+    }
+
+    .mute-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .mute-overlay .icon {
+      width: 96px;
+      height: 96px;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+    }
+
+    .mute-overlay svg {
+      width: 46px;
+      height: 46px;
     }
 
     #video-compare-container {
@@ -12,7 +122,10 @@
       line-height: 0;
       position: relative;
       width: 100%;
-      padding-top: 42.3%;
+      padding-top: 56.25%;
+      border-radius: calc(var(--radius) - 4px);
+      overflow: hidden;
+      background: #0b0b0b;
     }
 
     #video-compare-container > video {
@@ -32,28 +145,266 @@
 
     #video-clipper video {
       width: 200%;
-      postion: absolute;
+      position: absolute;
       height: 100%;
+    }
+
+    .video-meta {
+      padding: 0.9rem 0.1rem 0;
+    }
+
+    .video-meta h1 {
+      margin: 0 0 0.35rem;
+      font-size: clamp(1.35rem, 2vw, 1.8rem);
+      font-weight: 700;
+    }
+
+    .video-meta p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 1.5rem;
+      background: transparent;
+      border-radius: 0;
+      padding: 0.5rem 0;
+      box-shadow: none;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .sidebar-header h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .sync-chip {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      background: #111111;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    #controls {
+      display: grid;
+      gap: 1rem;
+      margin: 0;
+      min-width: 0;
+      position: relative;
+    }
+
+    .control-card {
+      display: grid;
+      grid-template-columns: 140px minmax(0, 1fr);
+      gap: 0.9rem;
+      padding: 0.25rem 0;
+      min-width: 0;
+      align-items: start;
+    }
+
+    .thumb {
+      border-radius: 10px;
+      overflow: hidden;
+      background: #0c0c0c;
+      aspect-ratio: 16 / 9;
+      min-width: 0;
+    }
+
+    .thumb img,
+    .thumb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .control-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .control-fields {
+      display: grid;
+      gap: 0.65rem;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .control-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .file-button {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.45rem 0.95rem;
+      border-radius: 999px;
+      background: #2a2a2a;
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .file-button input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .audio-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      background: #2a2a2a;
+      border: none;
+      color: var(--text);
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .audio-toggle svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .audio-toggle .icon-on {
+      display: none;
+    }
+
+    .audio-toggle[data-enabled="true"] .icon-on {
+      display: block;
+    }
+
+    .audio-toggle[data-enabled="true"] .icon-off {
+      display: none;
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+      }
     }
   </style>
 </head>
 
 <body>
-  <center>
-    <h1> <b>A</b> VS  <b>B</b> </h1>
-    <h3>Click on video to play or pause. Move mouse to change the hover.</h3>
-  </center>
+  <div id="app">
+    <div class="layout">
+      <div class="main-column">
+        <div class="video-panel">
+          <div id="video-compare-container">
+            <video id='src' loop autoplay playsinline onclick="video_click()">
+              <source src="resources/2 - 15 sec - 1000 frame - AI Girl Perks - Replacement.mp4">
+              <!-- <source src=/loca/path/to/your/mp4> -->
+            </video>
+            <div id="video-clipper">
+              <video id='tgt' loop autoplay playsinline onclick="video_click()">
+                <source src="resources/2 - 15 sec - 1000 frame - AI Girl Perks.mp4">
+                <!-- <source src=/home/yun/out2.mp4> -->
+              </video>
+            </div>
+            <div id="mute-overlay" class="mute-overlay" aria-label="Click to unmute" role="button" tabindex="0">
+              <div class="icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"></path>
+                  <path d="M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="video-meta">
+          <h1>A vs B</h1>
+          <p>Click the video to play or pause. Drag across the frame to reveal the comparison.</p>
+        </div>
+      </div>
 
-  <div id="video-compare-container">
-    <video id='src' loop autoplay onclick="video_click()">
-      <source src=https://s3-us-west-2.amazonaws.com/s.cdpn.io/4273/floodplain-dirty.mp4>
-      <!-- <source src=/loca/path/to/your/mp4> -->
-    </video>
-    <div id="video-clipper">
-      <video id='tgt' loop autoplay onclick="video_click()">
-        <source src=https://s3-us-west-2.amazonaws.com/s.cdpn.io/4273/floodplain-clean.mp4>
-        <!-- <source src=/home/yun/out2.mp4> -->
-      </video>
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h2>Controls</h2>
+          <span class="sync-chip">Synced</span>
+        </div>
+        <div id="controls">
+          <div class="control-card">
+            <div class="thumb">
+              <video id="left-thumb" muted playsinline preload="metadata"></video>
+            </div>
+            <div class="control-fields">
+              <div class="control-title">Left video</div>
+              <div class="control-actions">
+                <label class="file-button">
+                  <input id="left-file" type="file" accept="video/*">
+                  Choose file
+                </label>
+                <button id="left-audio" class="audio-toggle" type="button" aria-pressed="false" aria-label="Toggle left audio" data-enabled="false" title="Toggle audio">
+                  <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"></path>
+                    <path d="M16 8.5c1.5 1 2.5 2.6 2.5 4.5s-1 3.5-2.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                  </svg>
+                  <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"></path>
+                    <path d="M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="control-card">
+            <div class="thumb">
+              <video id="right-thumb" muted playsinline preload="metadata"></video>
+            </div>
+            <div class="control-fields">
+              <div class="control-title">Right video</div>
+              <div class="control-actions">
+                <label class="file-button">
+                  <input id="right-file" type="file" accept="video/*">
+                  Choose file
+                </label>
+                <button id="right-audio" class="audio-toggle" type="button" aria-pressed="true" aria-label="Toggle right audio" data-enabled="true" title="Toggle audio">
+                  <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"></path>
+                    <path d="M16 8.5c1.5 1 2.5 2.6 2.5 4.5s-1 3.5-2.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                  </svg>
+                  <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"></path>
+                    <path d="M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
     </div>
   </div>
 
@@ -61,20 +412,312 @@
     var v = document.getElementById("src");
     var v2 = document.getElementById("tgt");
 
+    var leftFile = document.getElementById("left-file");
+    var rightFile = document.getElementById("right-file");
+    var leftAudio = document.getElementById("left-audio");
+    var rightAudio = document.getElementById("right-audio");
+    var leftThumb = document.getElementById("left-thumb");
+    var rightThumb = document.getElementById("right-thumb");
+    var muteOverlay = document.getElementById("mute-overlay");
+
+    var leftObjectUrl = null;
+    var rightObjectUrl = null;
+    var glowCanvas = document.createElement("canvas");
+    var glowContext = glowCanvas.getContext("2d", { willReadFrequently: true });
+    var autoplayAttempted = false;
+    var glowInterval = null;
+
+    function isAudioEnabled(button) {
+      return button.dataset.enabled === "true";
+    }
+
+    function setAudioEnabled(button, enabled) {
+      button.dataset.enabled = enabled ? "true" : "false";
+      button.setAttribute("aria-pressed", enabled ? "true" : "false");
+    }
+
+    function getVideoSrc(video) {
+      if (video.currentSrc) {
+        return video.currentSrc;
+      }
+      var source = video.querySelector("source");
+      return source ? source.src : "";
+    }
+
+    function applyAudioSettings() {
+      v.muted = !isAudioEnabled(rightAudio);
+      v2.muted = !isAudioEnabled(leftAudio);
+      updateMuteOverlay();
+    }
+
+    function setThumbSource(thumbVideo, src) {
+      if (!src) {
+        return;
+      }
+      thumbVideo.src = src;
+      thumbVideo.load();
+    }
+
+    function finalizeThumb(thumbVideo) {
+      try {
+        thumbVideo.currentTime = 0;
+      } catch (error) {
+        // Ignore seek errors on short or not-ready videos.
+      }
+      thumbVideo.pause();
+    }
+
+    function sampleVideoColor(video) {
+      if (!video.videoWidth || !video.videoHeight) {
+        return null;
+      }
+      var sampleWidth = 32;
+      var sampleHeight = 18;
+      glowCanvas.width = sampleWidth;
+      glowCanvas.height = sampleHeight;
+      var data;
+      try {
+        glowContext.drawImage(video, 0, 0, sampleWidth, sampleHeight);
+        data = glowContext.getImageData(0, 0, sampleWidth, sampleHeight).data;
+      } catch (error) {
+        return null;
+      }
+      var r = 0;
+      var g = 0;
+      var b = 0;
+      var count = data.length / 4;
+      for (var i = 0; i < data.length; i += 4) {
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+      }
+      return [r / count, g / count, b / count];
+    }
+
+    function updateGlowFromVideos() {
+      var rightColor = sampleVideoColor(v);
+      var leftColor = sampleVideoColor(v2);
+      if (!rightColor && !leftColor) {
+        return;
+      }
+      var r = 0;
+      var g = 0;
+      var b = 0;
+      var count = 0;
+      if (rightColor) {
+        r += rightColor[0];
+        g += rightColor[1];
+        b += rightColor[2];
+        count += 1;
+      }
+      if (leftColor) {
+        r += leftColor[0];
+        g += leftColor[1];
+        b += leftColor[2];
+        count += 1;
+      }
+      r = Math.round(r / count);
+      g = Math.round(g / count);
+      b = Math.round(b / count);
+      document.documentElement.style.setProperty("--glow-r", r);
+      document.documentElement.style.setProperty("--glow-g", g);
+      document.documentElement.style.setProperty("--glow-b", b);
+    }
+
+    function startGlowLoop(video) {
+      if (video.requestVideoFrameCallback) {
+        var tick = function () {
+          if (!video.paused) {
+            updateGlowFromVideos();
+          }
+          video.requestVideoFrameCallback(tick);
+        };
+        video.requestVideoFrameCallback(tick);
+        return;
+      }
+      if (glowInterval) {
+        clearInterval(glowInterval);
+      }
+      glowInterval = setInterval(function () {
+        if (!video.paused) {
+          updateGlowFromVideos();
+        }
+      }, 120);
+    }
+
+    function setVideoSource(video, file, side) {
+      if (!file) {
+        return;
+      }
+      if (side === "left" && leftObjectUrl) {
+        URL.revokeObjectURL(leftObjectUrl);
+        leftObjectUrl = null;
+      }
+      if (side === "right" && rightObjectUrl) {
+        URL.revokeObjectURL(rightObjectUrl);
+        rightObjectUrl = null;
+      }
+
+      var objectUrl = URL.createObjectURL(file);
+      if (side === "left") {
+        leftObjectUrl = objectUrl;
+      } else {
+        rightObjectUrl = objectUrl;
+      }
+
+      v.pause();
+      v2.pause();
+      video.pause();
+      video.src = objectUrl;
+      video.load();
+      v.currentTime = 0;
+      v2.currentTime = 0;
+
+      if (side === "left") {
+        setThumbSource(leftThumb, objectUrl);
+      } else {
+        setThumbSource(rightThumb, objectUrl);
+      }
+    }
+
+    leftFile.addEventListener("change", function () {
+      setVideoSource(v2, leftFile.files[0], "left");
+    });
+
+    rightFile.addEventListener("change", function () {
+      setVideoSource(v, rightFile.files[0], "right");
+    });
+
+    setAudioEnabled(leftAudio, isAudioEnabled(leftAudio));
+    setAudioEnabled(rightAudio, isAudioEnabled(rightAudio));
+
+    leftAudio.addEventListener("click", function () {
+      setAudioEnabled(leftAudio, !isAudioEnabled(leftAudio));
+      applyAudioSettings();
+    });
+
+    rightAudio.addEventListener("click", function () {
+      setAudioEnabled(rightAudio, !isAudioEnabled(rightAudio));
+      applyAudioSettings();
+    });
+    applyAudioSettings();
+
+    function updateMuteOverlay() {
+      var rightEnabled = isAudioEnabled(rightAudio);
+      var leftEnabled = isAudioEnabled(leftAudio);
+      var showOverlay = (rightEnabled && v.muted) || (leftEnabled && v2.muted);
+      if (showOverlay) {
+        muteOverlay.classList.add("visible");
+      } else {
+        muteOverlay.classList.remove("visible");
+      }
+    }
+
+    function unmuteEnabled() {
+      var rightEnabled = isAudioEnabled(rightAudio);
+      var leftEnabled = isAudioEnabled(leftAudio);
+      v.muted = !rightEnabled;
+      v2.muted = !leftEnabled;
+      updateMuteOverlay();
+      Promise.all([v.play(), v2.play()]).catch(function () {});
+    }
+
+    muteOverlay.addEventListener("click", unmuteEnabled);
+    muteOverlay.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        unmuteEnabled();
+      }
+    });
+
+    function attemptAutoplay(force) {
+      if (autoplayAttempted && !force) {
+        return;
+      }
+      autoplayAttempted = true;
+      applyAudioSettings();
+      var desiredRightAudio = isAudioEnabled(rightAudio);
+      var desiredLeftAudio = isAudioEnabled(leftAudio);
+      var playPromise = Promise.all([v.play(), v2.play()]);
+      if (playPromise && playPromise.catch) {
+        playPromise.catch(function () {
+          v.muted = true;
+          v2.muted = true;
+          updateMuteOverlay();
+          Promise.all([v.play(), v2.play()]).then(function () {
+            setTimeout(function () {
+              v.muted = !desiredRightAudio;
+              v2.muted = !desiredLeftAudio;
+              updateMuteOverlay();
+              setTimeout(function () {
+                if ((desiredRightAudio || desiredLeftAudio) && (v.paused || v2.paused)) {
+                  v.muted = true;
+                  v2.muted = true;
+                  updateMuteOverlay();
+                  v.play();
+                  v2.play();
+                }
+              }, 150);
+            }, 200);
+          });
+        });
+      }
+    }
+
+    function primeThumbs() {
+      setThumbSource(leftThumb, getVideoSrc(v2));
+      setThumbSource(rightThumb, getVideoSrc(v));
+    }
+
+    window.addEventListener("load", function () {
+      attemptAutoplay(false);
+      primeThumbs();
+      updateMuteOverlay();
+    });
+
+    document.addEventListener("pointerdown", function () {
+      autoplayAttempted = false;
+      attemptAutoplay(true);
+    }, { once: true });
+
+    v.addEventListener("loadeddata", function () {
+      setThumbSource(rightThumb, getVideoSrc(v));
+      attemptAutoplay(true);
+      updateGlowFromVideos();
+      startGlowLoop(v);
+      updateMuteOverlay();
+    });
+
+    v2.addEventListener("loadeddata", function () {
+      setThumbSource(leftThumb, getVideoSrc(v2));
+      attemptAutoplay(true);
+      updateMuteOverlay();
+    });
+
+    leftThumb.addEventListener("loadeddata", function () {
+      finalizeThumb(leftThumb);
+    });
+
+    rightThumb.addEventListener("loadeddata", function () {
+      finalizeThumb(rightThumb);
+    });
+
     function video_click() {
       if (v.paused){
-       v.play();
-       v2.play(); 
+        v.play();
+        v2.play(); 
       }
       else{
         v.pause();
         v2.pause();
       }
-      // v.paused ? v.play() : v.pause();
-      // v2.paused ? v2.play() : v2.pause();
-      v.currentTime=v2.currentTime;
-      v2.currentTime=v.currentTime;
     }
+
+    v2.addEventListener("timeupdate", function () {
+      if (v2.currentTime < 0.05 && !v2.paused && Math.abs(v.currentTime - v2.currentTime) > 0.05) {
+        v.currentTime = 0;
+      }
+    });
 
     var videoContainer = document.getElementById("video-compare-container"),
     videoClipper = document.getElementById("video-clipper"),
