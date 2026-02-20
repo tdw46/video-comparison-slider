@@ -1716,7 +1716,7 @@
       var rightEnabled = isAudioEnabled(rightAudio);
       var leftEnabled = isAudioEnabled(leftAudio);
       var anyAudioEnabled = rightEnabled || leftEnabled;
-      var showOverlay = anyAudioEnabled && (!audioUnlocked || (rightEnabled && v.muted) || (leftEnabled && v2.muted));
+      var showOverlay = !audioUnlocked && anyAudioEnabled;
       if (showOverlay) {
         muteOverlay.classList.add("visible");
       } else {
