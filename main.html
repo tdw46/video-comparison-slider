@@ -35,6 +35,25 @@
       overflow-x: hidden;
     }
 
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #2a2a2a #111111;
+    }
+
+    *::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    *::-webkit-scrollbar-track {
+      background: #111111;
+    }
+
+    *::-webkit-scrollbar-thumb {
+      background: #2a2a2a;
+      border-radius: 999px;
+    }
+
     body::before {
       content: "";
       position: fixed;
@@ -52,6 +71,8 @@
       padding: 1rem 1rem 2.5rem;
       position: relative;
       z-index: 1;
+      height: 100vh;
+      overflow: hidden;
     }
 
     .layout {
@@ -59,10 +80,14 @@
       grid-template-columns: minmax(0, 1fr) 360px;
       gap: 1.75rem;
       align-items: start;
+      height: 100%;
     }
 
     .main-column {
       min-width: 0;
+      height: 100%;
+      overflow-y: auto;
+      padding-right: 0.5rem;
     }
 
     .video-panel {
@@ -173,6 +198,13 @@
       padding: 0.5rem 0;
       box-shadow: none;
       overflow: hidden;
+      height: 100%;
+    }
+
+    .sidebar-scroll {
+      height: 100%;
+      overflow-y: auto;
+      padding-right: 0.5rem;
     }
 
     .sidebar-header {
@@ -268,7 +300,7 @@
       display: grid;
       gap: 0.65rem;
       min-width: 0;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .control-actions {
@@ -337,11 +369,14 @@
       max-height: 0;
       opacity: 0;
       transition: max-height 180ms ease, opacity 180ms ease;
+      pointer-events: none;
     }
 
     .control-card.expanded .control-settings {
-      max-height: 140px;
+      max-height: 860px;
       opacity: 1;
+      overflow: visible;
+      pointer-events: auto;
     }
 
     .slider-row {
@@ -360,14 +395,124 @@
     .slider-value {
       font-size: 0.85rem;
       color: var(--muted);
-      min-width: 60px;
+      min-width: 70px;
       text-align: right;
+    }
+
+    .offset-input {
+      background: #1f1f1f;
+      border: none;
+      border-radius: 999px;
+      color: var(--text);
+      padding: 0.2rem 0.55rem;
+      width: 80px;
+      text-align: right;
+      font-size: 0.85rem;
+    }
+
+    .pad-overlay {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 140ms ease;
+      z-index: 2;
+    }
+
+    .pad-overlay.visible {
+      opacity: 1;
     }
 
     .slider-hint {
       font-size: 0.8rem;
       color: var(--muted);
       margin-top: 0.35rem;
+    }
+
+    .preview-frame {
+      margin-top: 0.5rem;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0c0c0c;
+      aspect-ratio: 16 / 9;
+    }
+
+    .preview-frame video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 0.4rem;
+      margin-top: 0.6rem;
+    }
+
+    .timeline-strip {
+      position: relative;
+      width: 100%;
+      height: 64px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #0c0c0c;
+    }
+
+    .timeline-strip canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .trim-range {
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.12);
+      pointer-events: none;
+    }
+
+    .trim-dim {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.35);
+      pointer-events: none;
+    }
+
+    .trim-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 8px;
+      background: #ff3d3d;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+      cursor: ew-resize;
+      z-index: 3;
+    }
+
+    .trim-handle::after {
+      content: "";
+      position: absolute;
+      top: 8px;
+      bottom: 8px;
+      left: 2px;
+      right: 2px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+    }
+
+    .timeline input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .timeline-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--muted);
     }
 
     @media (max-width: 980px) {
@@ -397,7 +542,9 @@
                 <source src="resources/2 - 15 sec - 1000 frame - AI Girl Perks.mp4">
                 <!-- <source src=/home/yun/out2.mp4> -->
               </video>
+              <div id="left-pad" class="pad-overlay"></div>
             </div>
+            <div id="right-pad" class="pad-overlay"></div>
             <div id="mute-overlay" class="mute-overlay" aria-label="Click to unmute" role="button" tabindex="0">
               <div class="icon">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -415,11 +562,12 @@
       </div>
 
       <aside class="sidebar">
-        <div class="sidebar-header">
-          <h2>Controls</h2>
-          <span class="sync-chip">Synced</span>
-        </div>
-        <div id="controls">
+        <div class="sidebar-scroll">
+          <div class="sidebar-header">
+            <h2>Controls</h2>
+            <span class="sync-chip">Synced</span>
+          </div>
+          <div id="controls">
           <div class="control-card">
             <div class="thumb">
               <video id="left-thumb" muted playsinline preload="metadata"></video>
@@ -454,9 +602,45 @@
               <div class="control-title">Track offset</div>
               <div class="slider-row">
                 <input id="left-offset" type="range" min="-2" max="2" step="0.05" value="0">
-                <span id="left-offset-value" class="slider-value">+0.00s</span>
+                <input id="left-offset-value" class="offset-input" type="number" step="0.01" value="0">
               </div>
               <div class="slider-hint">Negative leads, positive lags.</div>
+              <div class="control-title">Clip range</div>
+              <div class="preview-frame">
+                <video id="left-preview" muted playsinline preload="metadata"></video>
+              </div>
+              <div class="timeline">
+                <div class="timeline-strip" id="left-timeline">
+                  <canvas id="left-strip" width="320" height="64"></canvas>
+                  <div id="left-range" class="trim-range"></div>
+                  <div id="left-dim-left" class="trim-dim"></div>
+                  <div id="left-dim-right" class="trim-dim"></div>
+                  <div id="left-handle-start" class="trim-handle"></div>
+                  <div id="left-handle-end" class="trim-handle"></div>
+                </div>
+                <input id="left-clip-start" type="hidden" value="0">
+                <input id="left-clip-end" type="hidden" value="0">
+                <div class="timeline-labels">
+                  <span id="left-clip-start-label">0.00s</span>
+                  <span id="left-clip-end-label">0.00s</span>
+                </div>
+              </div>
+              <div class="slider-row">
+                <button id="left-length-mode" class="file-button" type="button">Clip to other</button>
+                <span id="left-clip-length" class="slider-value">0.00s</span>
+              </div>
+              <div class="slider-row">
+                <label class="control-title">Prioritize for loops</label>
+                <button id="left-loop-priority" class="audio-toggle" type="button" aria-pressed="false" data-enabled="false" title="Prioritize looping">
+                  <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 12a8 8 0 0 1 14.31-4.31L20 6v5h-5l1.85-1.85A6 6 0 0 0 6 12h2l-3 3-3-3h2zm16 0a8 8 0 0 1-14.31 4.31L4 18v-5h5l-1.85 1.85A6 6 0 0 0 18 12h-2l3-3 3 3h-2z" fill="currentColor"></path>
+                  </svg>
+                  <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 12a8 8 0 0 1 14.31-4.31L20 6v5h-5l1.85-1.85A6 6 0 0 0 6 12h2l-3 3-3-3h2z" fill="currentColor"></path>
+                    <path d="M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
           <div class="control-card">
@@ -493,10 +677,47 @@
               <div class="control-title">Track offset</div>
               <div class="slider-row">
                 <input id="right-offset" type="range" min="-2" max="2" step="0.05" value="0">
-                <span id="right-offset-value" class="slider-value">+0.00s</span>
+                <input id="right-offset-value" class="offset-input" type="number" step="0.01" value="0">
               </div>
               <div class="slider-hint">Negative leads, positive lags.</div>
+              <div class="control-title">Clip range</div>
+              <div class="preview-frame">
+                <video id="right-preview" muted playsinline preload="metadata"></video>
+              </div>
+              <div class="timeline">
+                <div class="timeline-strip" id="right-timeline">
+                  <canvas id="right-strip" width="320" height="64"></canvas>
+                  <div id="right-range" class="trim-range"></div>
+                  <div id="right-dim-left" class="trim-dim"></div>
+                  <div id="right-dim-right" class="trim-dim"></div>
+                  <div id="right-handle-start" class="trim-handle"></div>
+                  <div id="right-handle-end" class="trim-handle"></div>
+                </div>
+                <input id="right-clip-start" type="hidden" value="0">
+                <input id="right-clip-end" type="hidden" value="0">
+                <div class="timeline-labels">
+                  <span id="right-clip-start-label">0.00s</span>
+                  <span id="right-clip-end-label">0.00s</span>
+                </div>
+              </div>
+              <div class="slider-row">
+                <button id="right-length-mode" class="file-button" type="button">Pad to other</button>
+                <span id="right-clip-length" class="slider-value">0.00s</span>
+              </div>
+              <div class="slider-row">
+                <label class="control-title">Prioritize for loops</label>
+                <button id="right-loop-priority" class="audio-toggle" type="button" aria-pressed="true" data-enabled="true" title="Prioritize looping">
+                  <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 12a8 8 0 0 1 14.31-4.31L20 6v5h-5l1.85-1.85A6 6 0 0 0 6 12h2l-3 3-3-3h2zm16 0a8 8 0 0 1-14.31 4.31L4 18v-5h5l-1.85 1.85A6 6 0 0 0 18 12h-2l3-3 3 3h-2z" fill="currentColor"></path>
+                  </svg>
+                  <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 12a8 8 0 0 1 14.31-4.31L20 6v5h-5l1.85-1.85A6 6 0 0 0 6 12h2l-3 3-3-3h2z" fill="currentColor"></path>
+                    <path d="M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
+          </div>
           </div>
         </div>
       </aside>
@@ -518,6 +739,38 @@
     var rightOffset = document.getElementById("right-offset");
     var leftOffsetValue = document.getElementById("left-offset-value");
     var rightOffsetValue = document.getElementById("right-offset-value");
+    var leftClipStart = document.getElementById("left-clip-start");
+    var leftClipEnd = document.getElementById("left-clip-end");
+    var rightClipStart = document.getElementById("right-clip-start");
+    var rightClipEnd = document.getElementById("right-clip-end");
+    var leftClipStartLabel = document.getElementById("left-clip-start-label");
+    var leftClipEndLabel = document.getElementById("left-clip-end-label");
+    var rightClipStartLabel = document.getElementById("right-clip-start-label");
+    var rightClipEndLabel = document.getElementById("right-clip-end-label");
+    var leftTimeline = document.getElementById("left-timeline");
+    var rightTimeline = document.getElementById("right-timeline");
+    var leftStrip = document.getElementById("left-strip");
+    var rightStrip = document.getElementById("right-strip");
+    var leftRange = document.getElementById("left-range");
+    var rightRange = document.getElementById("right-range");
+    var leftHandleStart = document.getElementById("left-handle-start");
+    var leftHandleEnd = document.getElementById("left-handle-end");
+    var rightHandleStart = document.getElementById("right-handle-start");
+    var rightHandleEnd = document.getElementById("right-handle-end");
+    var leftDimLeft = document.getElementById("left-dim-left");
+    var leftDimRight = document.getElementById("left-dim-right");
+    var rightDimLeft = document.getElementById("right-dim-left");
+    var rightDimRight = document.getElementById("right-dim-right");
+    var leftLengthMode = document.getElementById("left-length-mode");
+    var rightLengthMode = document.getElementById("right-length-mode");
+    var leftClipLength = document.getElementById("left-clip-length");
+    var rightClipLength = document.getElementById("right-clip-length");
+    var leftPad = document.getElementById("left-pad");
+    var rightPad = document.getElementById("right-pad");
+    var leftPreview = document.getElementById("left-preview");
+    var rightPreview = document.getElementById("right-preview");
+    var leftLoopPriority = document.getElementById("left-loop-priority");
+    var rightLoopPriority = document.getElementById("right-loop-priority");
 
     var leftObjectUrl = null;
     var rightObjectUrl = null;
@@ -526,6 +779,75 @@
     var autoplayAttempted = false;
     var glowInterval = null;
     var lastRightOffset = 0;
+    var masterTime = 0;
+    var masterDuration = 0;
+    var isPlaying = false;
+    var lastTick = null;
+    var userInteracted = false;
+    var audioUnlocked = false;
+    var prevRightPadActive = false;
+    var prevLeftPadActive = false;
+    var leftStripSrc = "";
+    var rightStripSrc = "";
+    var leftStripBuilt = false;
+    var rightStripBuilt = false;
+    var playToken = 0;
+    var playQueued = false;
+    var debugLog = [];
+    var lastAudioState = {
+      rightPad: null,
+      leftPad: null,
+      rightEnabled: null,
+      leftEnabled: null,
+      unlocked: null,
+      rightMuted: null,
+      leftMuted: null
+    };
+
+    function dbg(label, data) {
+      try {
+        var entry = { t: Date.now(), label: label, data: data || {} };
+        debugLog.push(entry);
+        if (debugLog.length > 250) {
+          debugLog.shift();
+        }
+        if (window && window.DEBUG_AVS) {
+          console.log("[AVS]", label, data || {});
+        }
+      } catch (error) {
+        // ignore debug errors
+      }
+    }
+
+    window.AVS_DEBUG_DUMP = function () {
+      try {
+        return JSON.stringify(debugLog, null, 2);
+      } catch (error) {
+        return String(debugLog);
+      }
+    };
+
+    window.AVS_DEBUG_STATE = function () {
+      return {
+        userInteracted: userInteracted,
+        audioUnlocked: audioUnlocked,
+        isPlaying: isPlaying,
+        masterTime: masterTime,
+        masterDuration: masterDuration,
+        rightMuted: v.muted,
+        leftMuted: v2.muted,
+        rightPaused: v.paused,
+        leftPaused: v2.paused,
+        rightCurrent: v.currentTime,
+        leftCurrent: v2.currentTime,
+        rightClip: { start: rightClipStart.value, end: rightClipEnd.value },
+        leftClip: { start: leftClipStart.value, end: leftClipEnd.value },
+        rightOffset: rightOffset.value,
+        leftOffset: leftOffset.value,
+        rightPriority: isAudioEnabled(rightLoopPriority),
+        leftPriority: isAudioEnabled(leftLoopPriority)
+      };
+    };
 
     function isAudioEnabled(button) {
       return button.dataset.enabled === "true";
@@ -544,20 +866,76 @@
       return source ? source.src : "";
     }
 
-    function applyAudioSettings() {
-      v.muted = !isAudioEnabled(rightAudio);
-      v2.muted = !isAudioEnabled(leftAudio);
+    function updateAudioState(rightPadActive, leftPadActive) {
+      var rightEnabled = isAudioEnabled(rightAudio);
+      var leftEnabled = isAudioEnabled(leftAudio);
+      var allowAudio = audioUnlocked;
+      var desiredRightMuted = !allowAudio || rightPadActive || !rightEnabled;
+      var desiredLeftMuted = !allowAudio || leftPadActive || !leftEnabled;
+      if (v.muted !== desiredRightMuted) {
+        v.muted = desiredRightMuted;
+      }
+      if (v2.muted !== desiredLeftMuted) {
+        v2.muted = desiredLeftMuted;
+      }
+      if (!desiredRightMuted) {
+        v.volume = 1;
+      }
+      if (!desiredLeftMuted) {
+        v2.volume = 1;
+      }
       updateMuteOverlay();
+      if (
+        lastAudioState.rightMuted !== desiredRightMuted ||
+        lastAudioState.leftMuted !== desiredLeftMuted ||
+        lastAudioState.rightPad !== rightPadActive ||
+        lastAudioState.leftPad !== leftPadActive ||
+        lastAudioState.unlocked !== audioUnlocked ||
+        lastAudioState.rightEnabled !== rightEnabled ||
+        lastAudioState.leftEnabled !== leftEnabled
+      ) {
+        lastAudioState = {
+          rightPad: rightPadActive,
+          leftPad: leftPadActive,
+          rightEnabled: rightEnabled,
+          leftEnabled: leftEnabled,
+          unlocked: audioUnlocked,
+          rightMuted: desiredRightMuted,
+          leftMuted: desiredLeftMuted
+        };
+        dbg("audioState", {
+          userInteracted: userInteracted,
+          audioUnlocked: audioUnlocked,
+          rightEnabled: rightEnabled,
+          leftEnabled: leftEnabled,
+          rightMuted: desiredRightMuted,
+          leftMuted: desiredLeftMuted,
+          rightPadActive: rightPadActive,
+          leftPadActive: leftPadActive
+        });
+      }
+    }
+
+    function applyAudioSettings() {
+      updateAudioState(prevRightPadActive, prevLeftPadActive);
+      dbg("applyAudioSettings", {
+        userInteracted: userInteracted,
+        audioUnlocked: audioUnlocked,
+        rightEnabled: isAudioEnabled(rightAudio),
+        leftEnabled: isAudioEnabled(leftAudio),
+        rightMuted: v.muted,
+        leftMuted: v2.muted
+      });
     }
 
     function formatOffset(value) {
       var sign = value > 0 ? "+" : "";
-      return sign + value.toFixed(2) + "s";
+      return sign + value.toFixed(2);
     }
 
-    function updateOffsetLabels() {
-      leftOffsetValue.textContent = formatOffset(parseFloat(leftOffset.value || "0"));
-      rightOffsetValue.textContent = formatOffset(parseFloat(rightOffset.value || "0"));
+    function updateOffsetInputs() {
+      leftOffsetValue.value = formatOffset(parseFloat(leftOffset.value || "0"));
+      rightOffsetValue.value = formatOffset(parseFloat(rightOffset.value || "0"));
     }
 
     function wrapTime(time, duration) {
@@ -571,16 +949,174 @@
       return wrapped;
     }
 
-    function syncLeftToRight(force) {
-      if (v2.readyState < 1) {
+    function parseNumber(value, fallback) {
+      var parsed = parseFloat(value);
+      return isFinite(parsed) ? parsed : fallback;
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function getSegment(video, startInput, endInput) {
+      if (!isFinite(video.duration) || video.duration <= 0) {
+        return { start: 0, end: 0, length: 0, duration: 0 };
+      }
+      var start = clamp(parseNumber(startInput.value, 0), 0, video.duration);
+      var end = clamp(parseNumber(endInput.value, video.duration), 0, video.duration);
+      if (end < start) {
+        end = start;
+      }
+      return { start: start, end: end, length: end - start, duration: video.duration };
+    }
+
+    function ensureClipDefaults(video, startInput, endInput) {
+      if (!isFinite(video.duration) || video.duration <= 0) {
         return;
       }
-      var leftShift = parseFloat(leftOffset.value || "0");
-      var rightShift = parseFloat(rightOffset.value || "0");
-      var baseTime = v.currentTime - rightShift;
-      var desiredLeft = wrapTime(baseTime + leftShift, v2.duration || 0);
-      if (force || Math.abs(v2.currentTime - desiredLeft) > 0.03) {
-        v2.currentTime = desiredLeft;
+      var start = parseNumber(startInput.value, 0);
+      var end = parseNumber(endInput.value, 0);
+      if (end <= start || end === 0) {
+        startInput.value = "0";
+        endInput.value = video.duration.toFixed(2);
+      }
+    }
+
+    function updateClipLabels() {
+      var leftSeg = getSegment(v2, leftClipStart, leftClipEnd);
+      var rightSeg = getSegment(v, rightClipStart, rightClipEnd);
+      leftClipLength.textContent = leftSeg.length.toFixed(2) + "s";
+      rightClipLength.textContent = rightSeg.length.toFixed(2) + "s";
+      leftClipStartLabel.textContent = leftSeg.start.toFixed(2) + "s";
+      leftClipEndLabel.textContent = leftSeg.end.toFixed(2) + "s";
+      rightClipStartLabel.textContent = rightSeg.start.toFixed(2) + "s";
+      rightClipEndLabel.textContent = rightSeg.end.toFixed(2) + "s";
+      updateLengthModeButtons(leftSeg.length, rightSeg.length);
+    }
+
+    function updateLengthModeButtons(leftLen, rightLen) {
+      if (!(leftLen > 0) || !(rightLen > 0)) {
+        leftLengthMode.textContent = "Clip to other";
+        rightLengthMode.textContent = "Pad to other";
+        return;
+      }
+      if (leftLen >= rightLen) {
+        leftLengthMode.textContent = "Clip to other";
+        rightLengthMode.textContent = "Pad to other";
+      } else {
+        leftLengthMode.textContent = "Pad to other";
+        rightLengthMode.textContent = "Clip to other";
+      }
+    }
+
+    function applyAutoLength(side) {
+      var leftSeg = getSegment(v2, leftClipStart, leftClipEnd);
+      var rightSeg = getSegment(v, rightClipStart, rightClipEnd);
+      if (!(leftSeg.length > 0) || !(rightSeg.length > 0)) {
+        return;
+      }
+      if (side === "left") {
+        if (leftSeg.length >= rightSeg.length) {
+          leftClipEnd.value = (leftSeg.start + rightSeg.length).toFixed(2);
+          clampClipRanges();
+          updateClipLabels();
+          updateTrimUI("left");
+          updateMasterDuration();
+          syncFromMaster(true);
+        }
+      } else {
+        if (rightSeg.length >= leftSeg.length) {
+          rightClipEnd.value = (rightSeg.start + leftSeg.length).toFixed(2);
+          clampClipRanges();
+          updateClipLabels();
+          updateTrimUI("right");
+          updateMasterDuration();
+          syncFromMaster(true);
+        }
+      }
+    }
+
+    function getEffectiveDuration(isRight) {
+      var leftSeg = getSegment(v2, leftClipStart, leftClipEnd);
+      var rightSeg = getSegment(v, rightClipStart, rightClipEnd);
+      var leftLen = leftSeg.length;
+      var rightLen = rightSeg.length;
+      if (!(leftLen > 0) || !(rightLen > 0)) {
+        return isRight ? rightLen : leftLen;
+      }
+      var isThisLonger = isRight ? rightLen >= leftLen : leftLen >= rightLen;
+      var mode = isThisLonger ? "clip" : "pad";
+      return mode === "pad" ? Math.max(leftLen, rightLen) : Math.min(leftLen, rightLen);
+    }
+
+    function getMasterSide() {
+      return isAudioEnabled(rightLoopPriority) ? "right" : "left";
+    }
+
+    function syncFromMaster(force) {
+      if (!isFinite(masterDuration) || masterDuration <= 0) {
+        return;
+      }
+
+      var rightSeg = getSegment(v, rightClipStart, rightClipEnd);
+      var leftSeg = getSegment(v2, leftClipStart, leftClipEnd);
+      var rightOffsetValue = parseNumber(rightOffset.value, 0);
+      var leftOffsetVal = parseNumber(leftOffset.value, 0);
+      var masterSide = getMasterSide();
+
+      var masterVideo = masterSide === "right" ? v : v2;
+      var masterSeg = masterSide === "right" ? rightSeg : leftSeg;
+      var masterOffset = masterSide === "right" ? rightOffsetValue : leftOffsetVal;
+      var masterLen = masterSeg.length;
+      if (!(masterLen > 0)) {
+        return;
+      }
+
+      masterTime = wrapTime(masterVideo.currentTime - masterSeg.start - masterOffset, masterLen);
+      var masterTarget = masterSeg.start + wrapTime(masterTime + masterOffset, masterLen);
+      if (masterVideo.currentTime < masterSeg.start || masterVideo.currentTime > masterSeg.end + 0.02) {
+        masterVideo.currentTime = masterTarget;
+      }
+
+      var otherVideo = masterSide === "right" ? v2 : v;
+      var otherSeg = masterSide === "right" ? leftSeg : rightSeg;
+      var otherOffset = masterSide === "right" ? leftOffsetVal : rightOffsetValue;
+      var otherLen = otherSeg.length;
+      var otherPadActive = otherLen > 0 ? masterTime >= otherLen : true;
+
+      var rightPadActive = masterSide === "right" ? false : otherPadActive;
+      var leftPadActive = masterSide === "left" ? false : otherPadActive;
+
+      rightPad.classList.toggle("visible", rightPadActive);
+      leftPad.classList.toggle("visible", leftPadActive);
+
+      if (!otherPadActive && otherLen > 0) {
+        var desiredOther = otherSeg.start + wrapTime(masterTime + otherOffset, otherLen);
+        if (force || Math.abs(otherVideo.currentTime - desiredOther) > 0.08) {
+          otherVideo.currentTime = desiredOther;
+        }
+      }
+
+      if (isPlaying) {
+        if (masterVideo.paused) {
+          masterVideo.play().catch(function () {});
+        }
+        if (!otherVideo.paused) {
+          otherVideo.pause();
+        }
+      }
+
+      prevRightPadActive = rightPadActive;
+      prevLeftPadActive = leftPadActive;
+      updateAudioState(rightPadActive, leftPadActive);
+      if (force) {
+        dbg("syncFromMaster", {
+          rightPadActive: rightPadActive,
+          leftPadActive: leftPadActive,
+          rightMuted: v.muted,
+          leftMuted: v2.muted,
+          masterTime: masterTime
+        });
       }
     }
 
@@ -590,6 +1126,288 @@
       }
       thumbVideo.src = src;
       thumbVideo.load();
+    }
+
+    function setPreviewSource(previewVideo, src) {
+      if (!src) {
+        return;
+      }
+      previewVideo.muted = true;
+      previewVideo.volume = 0;
+      previewVideo.src = src;
+      previewVideo.load();
+    }
+
+    function clampClipRanges() {
+      var leftSeg = getSegment(v2, leftClipStart, leftClipEnd);
+      var rightSeg = getSegment(v, rightClipStart, rightClipEnd);
+      leftClipStart.value = leftSeg.start.toFixed(2);
+      leftClipEnd.value = leftSeg.end.toFixed(2);
+      rightClipStart.value = rightSeg.start.toFixed(2);
+      rightClipEnd.value = rightSeg.end.toFixed(2);
+    }
+
+    function updateTrimUI(side) {
+      var timeline = side === "left" ? leftTimeline : rightTimeline;
+      var startHandle = side === "left" ? leftHandleStart : rightHandleStart;
+      var endHandle = side === "left" ? leftHandleEnd : rightHandleEnd;
+      var range = side === "left" ? leftRange : rightRange;
+      var startInput = side === "left" ? leftClipStart : rightClipStart;
+      var endInput = side === "left" ? leftClipEnd : rightClipEnd;
+      var dimLeft = side === "left" ? leftDimLeft : rightDimLeft;
+      var dimRight = side === "left" ? leftDimRight : rightDimRight;
+      var video = side === "left" ? v2 : v;
+      var duration = isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+      var start = parseNumber(startInput.value, 0);
+      var end = parseNumber(endInput.value, duration);
+      if (duration <= 0) {
+        return;
+      }
+      if (end <= start) {
+        end = duration;
+        startInput.value = "0";
+        endInput.value = duration.toFixed(2);
+      }
+      var startPct = clamp(start / duration, 0, 1);
+      var endPct = clamp(end / duration, 0, 1);
+      var width = timeline.clientWidth;
+      if (width <= 0) {
+        return;
+      }
+      var handleHalf = 4;
+      var startX = clamp(startPct * width, handleHalf, width - handleHalf);
+      var endX = clamp(endPct * width, handleHalf, width - handleHalf);
+      startHandle.style.left = startX + "px";
+      endHandle.style.left = endX + "px";
+      range.style.left = startX + "px";
+      range.style.right = (width - endX) + "px";
+      dimLeft.style.left = "0px";
+      dimLeft.style.width = startX + "px";
+      dimRight.style.right = "0px";
+      dimRight.style.width = (width - endX) + "px";
+    }
+
+    function initTrimDrag(side) {
+      var timeline = side === "left" ? leftTimeline : rightTimeline;
+      var startHandle = side === "left" ? leftHandleStart : rightHandleStart;
+      var endHandle = side === "left" ? leftHandleEnd : rightHandleEnd;
+      var startInput = side === "left" ? leftClipStart : rightClipStart;
+      var endInput = side === "left" ? leftClipEnd : rightClipEnd;
+      var preview = side === "left" ? leftPreview : rightPreview;
+      var video = side === "left" ? v2 : v;
+      var dragTarget = { handle: null };
+
+      function pointerToValue(clientX) {
+        var rect = timeline.getBoundingClientRect();
+        var pct = clamp((clientX - rect.left) / rect.width, 0, 1);
+        var duration = isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+        return pct * duration;
+      }
+
+    function updateFromDrag(clientX) {
+      if (!dragTarget.handle) {
+        return;
+      }
+      pauseMaster();
+      var value = pointerToValue(clientX);
+      var startVal = parseNumber(startInput.value, 0);
+      var endVal = parseNumber(endInput.value, video.duration || 0);
+        if (dragTarget.handle === "start") {
+          startVal = Math.min(value, endVal);
+          startInput.value = startVal.toFixed(2);
+        } else {
+          endVal = Math.max(value, startVal);
+          endInput.value = endVal.toFixed(2);
+        }
+        clampClipRanges();
+        updateClipLabels();
+        updateTrimUI(side);
+      updateMasterDuration();
+      syncFromMaster(true);
+      playPreview(preview, startInput, endInput);
+    }
+
+      function startDrag(handle, event) {
+        dragTarget.handle = handle;
+        timeline.setPointerCapture(event.pointerId);
+        updateFromDrag(event.clientX);
+      }
+
+      timeline.addEventListener("pointermove", function (event) {
+        if (dragTarget.handle) {
+          updateFromDrag(event.clientX);
+        }
+      });
+
+      timeline.addEventListener("pointerup", function (event) {
+        if (!dragTarget.handle) {
+          return;
+        }
+        dragTarget.handle = null;
+        if (timeline.hasPointerCapture(event.pointerId)) {
+          timeline.releasePointerCapture(event.pointerId);
+        }
+        requestPlayMaster("trim-pointerup");
+      });
+
+      timeline.addEventListener("pointercancel", function (event) {
+        if (!dragTarget.handle) {
+          return;
+        }
+        dragTarget.handle = null;
+        if (timeline.hasPointerCapture(event.pointerId)) {
+          timeline.releasePointerCapture(event.pointerId);
+        }
+        requestPlayMaster("trim-cancel");
+      });
+
+      window.addEventListener("pointerup", function (event) {
+        if (!dragTarget.handle) {
+          return;
+        }
+        dragTarget.handle = null;
+        if (timeline.hasPointerCapture(event.pointerId)) {
+          timeline.releasePointerCapture(event.pointerId);
+        }
+        requestPlayMaster("trim-window-up");
+      });
+
+      startHandle.addEventListener("pointerdown", function (event) {
+        startDrag("start", event);
+      });
+
+      endHandle.addEventListener("pointerdown", function (event) {
+        startDrag("end", event);
+      });
+    }
+
+    function buildFrameStrip(previewVideo, canvas, onDone) {
+      var src = previewVideo.currentSrc || previewVideo.src;
+      if (!src) {
+        return;
+      }
+      var ctx = canvas.getContext("2d");
+      var stripVideo = document.createElement("video");
+      stripVideo.muted = true;
+      stripVideo.playsInline = true;
+      stripVideo.preload = "auto";
+      stripVideo.src = src;
+      var frameCount = 12;
+
+      stripVideo.addEventListener("loadedmetadata", function () {
+        var duration = stripVideo.duration;
+        if (!isFinite(duration) || duration <= 0) {
+          return;
+        }
+        var dpr = window.devicePixelRatio || 1;
+        var canvasWidth = Math.max(1, Math.round(canvas.clientWidth * dpr));
+        var canvasHeight = Math.max(1, Math.round(canvas.clientHeight * dpr));
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        var sliceWidth = canvasWidth / frameCount;
+        ctx.fillStyle = "#0c0c0c";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        var index = 0;
+
+        var drawNext = function () {
+          if (index >= frameCount) {
+            return;
+          }
+          var t = (index / (frameCount - 1)) * duration;
+          stripVideo.currentTime = t;
+        };
+
+        stripVideo.addEventListener("seeked", function handler() {
+          try {
+            var vW = stripVideo.videoWidth || 1;
+            var vH = stripVideo.videoHeight || 1;
+            var scale = Math.min(sliceWidth / vW, canvasHeight / vH);
+            var drawW = vW * scale;
+            var drawH = vH * scale;
+            var dx = index * sliceWidth + (sliceWidth - drawW) / 2;
+            var dy = (canvasHeight - drawH) / 2;
+            ctx.drawImage(stripVideo, dx, dy, drawW, drawH);
+          } catch (error) {
+            return;
+          }
+          index += 1;
+          if (index >= frameCount) {
+            if (onDone) {
+              onDone();
+            }
+            return;
+          }
+          drawNext();
+        });
+
+        drawNext();
+      }, { once: true });
+    }
+
+    function scheduleStripBuild(side, force) {
+      var preview = side === "left" ? leftPreview : rightPreview;
+      var canvas = side === "left" ? leftStrip : rightStrip;
+      var src = preview.currentSrc || preview.src;
+      if (!src) {
+        return;
+      }
+      if (!force) {
+        if (side === "left" && leftStripBuilt && leftStripSrc === src) {
+          return;
+        }
+        if (side === "right" && rightStripBuilt && rightStripSrc === src) {
+          return;
+        }
+      }
+      if (side === "left") {
+        leftStripSrc = src;
+        leftStripBuilt = false;
+      } else {
+        rightStripSrc = src;
+        rightStripBuilt = false;
+      }
+      var run = function () {
+        buildFrameStrip(preview, canvas, function () {
+          if (side === "left") {
+            leftStripBuilt = true;
+          } else {
+            rightStripBuilt = true;
+          }
+        });
+      };
+      if (isPlaying) {
+        setTimeout(run, 400);
+      } else if (window.requestIdleCallback) {
+        window.requestIdleCallback(run, { timeout: 600 });
+      } else {
+        setTimeout(run, 200);
+      }
+    }
+
+    function updateClipMaxes() {
+      if (isFinite(v2.duration) && v2.duration > 0) {
+        leftClipStart.max = v2.duration.toFixed(2);
+        leftClipEnd.max = v2.duration.toFixed(2);
+      }
+      if (isFinite(v.duration) && v.duration > 0) {
+        rightClipStart.max = v.duration.toFixed(2);
+        rightClipEnd.max = v.duration.toFixed(2);
+      }
+    }
+
+    function playPreview(previewVideo, startInput, endInput) {
+      var segment = getSegment(previewVideo, startInput, endInput);
+      if (segment.length <= 0) {
+        return;
+      }
+      previewVideo.muted = true;
+      previewVideo.volume = 0;
+      try {
+        previewVideo.currentTime = segment.start;
+      } catch (error) {
+        return;
+      }
+      previewVideo.play().catch(function () {});
     }
 
     function finalizeThumb(thumbVideo) {
@@ -724,7 +1542,8 @@
 
     setAudioEnabled(leftAudio, isAudioEnabled(leftAudio));
     setAudioEnabled(rightAudio, isAudioEnabled(rightAudio));
-    updateOffsetLabels();
+    updateOffsetInputs();
+    updateClipLabels();
 
     leftAudio.addEventListener("click", function () {
       setAudioEnabled(leftAudio, !isAudioEnabled(leftAudio));
@@ -737,6 +1556,56 @@
     });
     applyAudioSettings();
 
+    leftLengthMode.addEventListener("click", function () {
+      pauseMaster();
+      applyAutoLength("left");
+      updateMasterDuration();
+      syncFromMaster(true);
+      requestAnimationFrame(function () {
+        requestPlayMaster("left-length");
+      });
+    });
+
+    rightLengthMode.addEventListener("click", function () {
+      pauseMaster();
+      applyAutoLength("right");
+      updateMasterDuration();
+      syncFromMaster(true);
+      requestAnimationFrame(function () {
+        requestPlayMaster("right-length");
+      });
+    });
+
+    function setLoopPriority(side) {
+      if (side === "left") {
+        setAudioEnabled(leftLoopPriority, true);
+        setAudioEnabled(rightLoopPriority, false);
+      } else {
+        setAudioEnabled(rightLoopPriority, true);
+        setAudioEnabled(leftLoopPriority, false);
+      }
+      pauseMaster();
+      updateMasterDuration();
+      syncFromMaster(true);
+      requestAnimationFrame(function () {
+        requestPlayMaster("loop-priority");
+      });
+    }
+
+    leftLoopPriority.addEventListener("click", function () {
+      if (!isAudioEnabled(leftLoopPriority)) {
+        setLoopPriority("left");
+      }
+    });
+
+    rightLoopPriority.addEventListener("click", function () {
+      if (!isAudioEnabled(rightLoopPriority)) {
+        setLoopPriority("right");
+      }
+    });
+
+    setLoopPriority("right");
+
     lastRightOffset = parseFloat(rightOffset.value || "0");
 
     document.querySelectorAll(".settings-toggle").forEach(function (toggle) {
@@ -744,29 +1613,92 @@
         var card = toggle.closest(".control-card");
         var expanded = card.classList.toggle("expanded");
         toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+        if (expanded) {
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              if (card.querySelector("#left-preview")) {
+                scheduleStripBuild("left", false);
+                updateTrimUI("left");
+              } else {
+                scheduleStripBuild("right", false);
+                updateTrimUI("right");
+              }
+            });
+          });
+        }
       });
     });
 
+    function syncOffsetInputToSlider(input, slider) {
+      var value = parseNumber(input.value, 0);
+      var min = parseNumber(slider.min, -2);
+      var max = parseNumber(slider.max, 2);
+      if (value < min) {
+        slider.min = value;
+      }
+      if (value > max) {
+        slider.max = value;
+      }
+      slider.value = value;
+    }
+
     leftOffset.addEventListener("input", function () {
-      updateOffsetLabels();
-      syncLeftToRight(true);
+      updateOffsetInputs();
+      syncFromMaster(true);
     });
 
     rightOffset.addEventListener("input", function () {
-      var newOffset = parseFloat(rightOffset.value || "0");
-      var baseTime = v.currentTime - lastRightOffset;
-      lastRightOffset = newOffset;
-      if (v.readyState >= 1 && isFinite(v.duration) && v.duration > 0) {
-        v.currentTime = wrapTime(baseTime + newOffset, v.duration);
-      }
-      updateOffsetLabels();
-      syncLeftToRight(true);
+      lastRightOffset = parseFloat(rightOffset.value || "0");
+      updateOffsetInputs();
+      syncFromMaster(true);
     });
+
+    leftOffsetValue.addEventListener("input", function () {
+      syncOffsetInputToSlider(leftOffsetValue, leftOffset);
+      updateOffsetInputs();
+      syncFromMaster(true);
+    });
+
+    rightOffsetValue.addEventListener("input", function () {
+      syncOffsetInputToSlider(rightOffsetValue, rightOffset);
+      updateOffsetInputs();
+      syncFromMaster(true);
+    });
+
+    [leftClipStart, leftClipEnd, rightClipStart, rightClipEnd].forEach(function (input) {
+      input.addEventListener("input", function () {
+        pauseMaster();
+        clampClipRanges();
+        updateClipLabels();
+        updateMasterDuration();
+        syncFromMaster(true);
+        if (input === leftClipStart || input === leftClipEnd) {
+          playPreview(leftPreview, leftClipStart, leftClipEnd);
+        }
+        if (input === rightClipStart || input === rightClipEnd) {
+          playPreview(rightPreview, rightClipStart, rightClipEnd);
+        }
+        requestPlayMaster("clip-input");
+      });
+    });
+
+    initTrimDrag("left");
+    initTrimDrag("right");
+
+    if (window.ResizeObserver) {
+      var trimResizeObserver = new ResizeObserver(function () {
+        updateTrimUI("left");
+        updateTrimUI("right");
+      });
+      trimResizeObserver.observe(leftTimeline);
+      trimResizeObserver.observe(rightTimeline);
+    }
 
     function updateMuteOverlay() {
       var rightEnabled = isAudioEnabled(rightAudio);
       var leftEnabled = isAudioEnabled(leftAudio);
-      var showOverlay = (rightEnabled && v.muted) || (leftEnabled && v2.muted);
+      var anyAudioEnabled = rightEnabled || leftEnabled;
+      var showOverlay = anyAudioEnabled && (!audioUnlocked || (rightEnabled && v.muted) || (leftEnabled && v2.muted));
       if (showOverlay) {
         muteOverlay.classList.add("visible");
       } else {
@@ -775,12 +1707,26 @@
     }
 
     function unmuteEnabled() {
+      userInteracted = true;
+      audioUnlocked = true;
       var rightEnabled = isAudioEnabled(rightAudio);
       var leftEnabled = isAudioEnabled(leftAudio);
-      v.muted = !rightEnabled;
-      v2.muted = !leftEnabled;
+      updateAudioState(prevRightPadActive, prevLeftPadActive);
       updateMuteOverlay();
-      Promise.all([v.play(), v2.play()]).catch(function () {});
+      dbg("unmuteEnabled", {
+        rightEnabled: rightEnabled,
+        leftEnabled: leftEnabled,
+        rightMuted: v.muted,
+        leftMuted: v2.muted
+      });
+      var playPromise = Promise.all([v.play(), v2.play()]);
+      if (playPromise && playPromise.catch) {
+        playPromise.catch(function () {
+          audioUnlocked = false;
+          updateAudioState(prevRightPadActive, prevLeftPadActive);
+        });
+      }
+      playMaster();
     }
 
     muteOverlay.addEventListener("click", unmuteEnabled);
@@ -796,66 +1742,88 @@
         return;
       }
       autoplayAttempted = true;
-      applyAudioSettings();
-      var desiredRightAudio = isAudioEnabled(rightAudio);
-      var desiredLeftAudio = isAudioEnabled(leftAudio);
+      v.muted = true;
+      v2.muted = true;
+      updateAudioState(prevRightPadActive, prevLeftPadActive);
+      dbg("attemptAutoplay", { force: force });
       var playPromise = Promise.all([v.play(), v2.play()]);
       if (playPromise && playPromise.catch) {
         playPromise.catch(function () {
           v.muted = true;
           v2.muted = true;
           updateMuteOverlay();
-          Promise.all([v.play(), v2.play()]).then(function () {
-            setTimeout(function () {
-              v.muted = !desiredRightAudio;
-              v2.muted = !desiredLeftAudio;
-              updateMuteOverlay();
-              setTimeout(function () {
-                if ((desiredRightAudio || desiredLeftAudio) && (v.paused || v2.paused)) {
-                  v.muted = true;
-                  v2.muted = true;
-                  updateMuteOverlay();
-                  v.play();
-                  v2.play();
-                }
-              }, 150);
-            }, 200);
-          });
         });
       }
+      requestPlayMaster("autoplay");
     }
 
     function primeThumbs() {
       setThumbSource(leftThumb, getVideoSrc(v2));
       setThumbSource(rightThumb, getVideoSrc(v));
+      setPreviewSource(leftPreview, getVideoSrc(v2));
+      setPreviewSource(rightPreview, getVideoSrc(v));
+      scheduleStripBuild("left", true);
+      scheduleStripBuild("right", true);
+      ensureClipDefaults(v2, leftClipStart, leftClipEnd);
+      ensureClipDefaults(v, rightClipStart, rightClipEnd);
     }
 
     window.addEventListener("load", function () {
       attemptAutoplay(false);
       primeThumbs();
       updateMuteOverlay();
+      updateClipLabels();
+      requestAnimationFrame(function () {
+        updateTrimUI("left");
+        updateTrimUI("right");
+      });
+    });
+
+    window.addEventListener("resize", function () {
+      updateTrimUI("left");
+      updateTrimUI("right");
     });
 
     document.addEventListener("pointerdown", function () {
+      userInteracted = true;
       autoplayAttempted = false;
+      applyAudioSettings();
       attemptAutoplay(true);
     }, { once: true });
 
     v.addEventListener("loadeddata", function () {
       setThumbSource(rightThumb, getVideoSrc(v));
+      setPreviewSource(rightPreview, getVideoSrc(v));
+      scheduleStripBuild("right", true);
       attemptAutoplay(true);
       updateGlowFromVideos();
       startGlowLoop(v);
       updateMuteOverlay();
       lastRightOffset = parseFloat(rightOffset.value || "0");
-      syncLeftToRight(true);
+      ensureClipDefaults(v, rightClipStart, rightClipEnd);
+      rightClipStart.value = "0";
+      rightClipEnd.value = v.duration.toFixed(2);
+      updateClipMaxes();
+      updateClipLabels();
+      updateTrimUI("right");
+      updateMasterDuration();
+      syncFromMaster(true);
     });
 
     v2.addEventListener("loadeddata", function () {
       setThumbSource(leftThumb, getVideoSrc(v2));
+      setPreviewSource(leftPreview, getVideoSrc(v2));
+      scheduleStripBuild("left", true);
       attemptAutoplay(true);
       updateMuteOverlay();
-      syncLeftToRight(true);
+      ensureClipDefaults(v2, leftClipStart, leftClipEnd);
+      leftClipStart.value = "0";
+      leftClipEnd.value = v2.duration.toFixed(2);
+      updateClipMaxes();
+      updateClipLabels();
+      updateTrimUI("left");
+      updateMasterDuration();
+      syncFromMaster(true);
     });
 
     leftThumb.addEventListener("loadeddata", function () {
@@ -866,23 +1834,115 @@
       finalizeThumb(rightThumb);
     });
 
+    leftPreview.addEventListener("timeupdate", function () {
+      var segment = getSegment(leftPreview, leftClipStart, leftClipEnd);
+      if (segment.length > 0 && leftPreview.currentTime >= segment.end) {
+        leftPreview.currentTime = segment.start;
+      }
+    });
+
+    rightPreview.addEventListener("timeupdate", function () {
+      var segment = getSegment(rightPreview, rightClipStart, rightClipEnd);
+      if (segment.length > 0 && rightPreview.currentTime >= segment.end) {
+        rightPreview.currentTime = segment.start;
+      }
+    });
+
     function video_click() {
-      if (v.paused){
-        syncLeftToRight(true);
-        v.play();
-        v2.play(); 
+      if (!isPlaying){
+        requestPlayMaster("toggle-play");
       }
       else{
-        v.pause();
-        v2.pause();
+        pauseMaster();
       }
     }
 
-    v.addEventListener("timeupdate", function () {
-      if (!v.paused) {
-        syncLeftToRight(false);
+    function updateMasterDuration() {
+      var rightSeg = getSegment(v, rightClipStart, rightClipEnd);
+      var leftSeg = getSegment(v2, leftClipStart, leftClipEnd);
+      var masterSide = getMasterSide();
+      var masterLen = masterSide === "right" ? rightSeg.length : leftSeg.length;
+      var fallbackLen = masterSide === "right" ? leftSeg.length : rightSeg.length;
+      masterDuration = masterLen || fallbackLen || 0;
+      if (!isFinite(masterDuration) || masterDuration <= 0) {
+        masterDuration = 0;
       }
-    });
+      if (masterDuration > 0) {
+        masterTime = wrapTime(masterTime, masterDuration);
+      }
+    }
+
+    function tick(now) {
+      if (!isPlaying) {
+        return;
+      }
+      syncFromMaster(false);
+      requestAnimationFrame(tick);
+    }
+
+    function playMaster() {
+      ensureClipDefaults(v2, leftClipStart, leftClipEnd);
+      ensureClipDefaults(v, rightClipStart, rightClipEnd);
+      updateClipMaxes();
+      applyAudioSettings();
+      updateMasterDuration();
+      if (masterDuration <= 0) {
+        ensureClipDefaults(v2, leftClipStart, leftClipEnd);
+        ensureClipDefaults(v, rightClipStart, rightClipEnd);
+        updateMasterDuration();
+        if (masterDuration <= 0) {
+          return;
+        }
+      }
+      playToken += 1;
+      var token = playToken;
+      dbg("playMaster", { token: token, masterDuration: masterDuration, masterTime: masterTime });
+      var masterSide = getMasterSide();
+      var masterVideo = masterSide === "right" ? v : v2;
+      var otherVideo = masterSide === "right" ? v2 : v;
+      masterVideo.playbackRate = 1;
+      otherVideo.playbackRate = 1;
+      if (!isPlaying) {
+        isPlaying = true;
+        lastTick = null;
+        requestAnimationFrame(tick);
+        if (masterVideo.paused) {
+          masterVideo.play().catch(function () {});
+        }
+        if (!otherVideo.paused) {
+          otherVideo.pause();
+        }
+      }
+      requestAnimationFrame(function () {
+        if (token !== playToken) {
+          return;
+        }
+        syncFromMaster(true);
+      });
+    }
+
+    function requestPlayMaster(reason) {
+      if (playQueued) {
+        return;
+      }
+      playQueued = true;
+      requestAnimationFrame(function () {
+        playQueued = false;
+        dbg("requestPlayMaster", { reason: reason || "unknown" });
+        playMaster();
+      });
+    }
+
+    function pauseMaster() {
+      isPlaying = false;
+      playToken += 1;
+      v.pause();
+      v2.pause();
+    }
+
+    function setMasterFromRight() {
+      // Deprecated: master time now derived from the prioritized video in syncFromMaster.
+    }
 
     var videoContainer = document.getElementById("video-compare-container"),
     videoClipper = document.getElementById("video-clipper"),
@@ -898,8 +1958,8 @@
       }
     }
     videoContainer.addEventListener("mousemove", trackLocation, false);
-    videoContainer.addEventListener("touchstart", trackLocation, false);
-    videoContainer.addEventListener("touchmove", trackLocation, false);
+    videoContainer.addEventListener("touchstart", trackLocation, { passive: true });
+    videoContainer.addEventListener("touchmove", trackLocation, { passive: true });
   </script>
 </body>
 </html>
