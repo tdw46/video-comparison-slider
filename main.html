@@ -68,10 +68,10 @@
     #app {
       max-width: 100%;
       margin: 0 auto;
-      padding: 1rem 1rem 2.5rem;
+      padding: 1rem;
       position: relative;
       z-index: 1;
-      height: 100vh;
+      height: 100dvh;
       overflow: hidden;
     }
 
@@ -81,10 +81,12 @@
       gap: 1.75rem;
       align-items: start;
       height: 100%;
+      min-height: 0;
     }
 
     .main-column {
       min-width: 0;
+      min-height: 0;
       height: 100%;
       overflow-y: auto;
       padding-right: 0.5rem;
@@ -99,9 +101,181 @@
       overflow: hidden;
     }
 
+    .player-shell {
+      position: relative;
+    }
+
     .video-panel > * {
       position: relative;
       z-index: 1;
+    }
+
+    .transport {
+      margin-top: 0.75rem;
+      background: var(--panel);
+      border-radius: 14px;
+      padding: 0.85rem 1rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .transport-scrub {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .transport-scrub input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .transport-time {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .transport-controls {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .transport-left {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .transport-center {
+      display: flex;
+      justify-content: center;
+    }
+
+    .transport-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+
+    .icon-button {
+      border: none;
+      border-radius: 999px;
+      width: 42px;
+      height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--panel-weak);
+      color: var(--text);
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .icon-button:hover {
+      background: #303030;
+      transform: translateY(-1px);
+    }
+
+    .icon-button svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .icon-button .icon-pause {
+      display: none;
+    }
+
+    .icon-button[data-playing="true"] .icon-play {
+      display: none;
+    }
+
+    .icon-button[data-playing="true"] .icon-pause {
+      display: block;
+    }
+
+    #lock-split .icon-lock-closed {
+      display: none;
+    }
+
+    #lock-split[data-locked="true"] .icon-lock-open {
+      display: none;
+    }
+
+    #lock-split[data-locked="true"] .icon-lock-closed {
+      display: block;
+    }
+
+    .speed-buttons {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+
+    .speed-option {
+      border: none;
+      background: #222222;
+      color: var(--text);
+      padding: 0.35rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .speed-option:hover {
+      background: #303030;
+    }
+
+    .speed-option.active {
+      background: var(--accent);
+      color: #0f0f0f;
+      font-weight: 600;
+    }
+
+    .fullscreen-tip {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 6;
+    }
+
+    .fullscreen-tip.visible {
+      opacity: 1;
+    }
+
+    body.fullscreen-active .transport {
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      width: min(1120px, 94vw);
+      margin: 0;
+      transform: translate(-50%, 130%);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 9999;
+      box-shadow: var(--shadow);
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+
+    body.fullscreen-active.fullscreen-controls-visible .transport {
+      transform: translate(-50%, 0);
+      opacity: 1;
+      pointer-events: auto;
     }
 
     .mute-overlay {
@@ -192,19 +366,21 @@
 
     .sidebar {
       position: sticky;
-      top: 1.5rem;
+      top: 1rem;
       background: transparent;
       border-radius: 0;
       padding: 0.5rem 0;
       box-shadow: none;
       overflow: hidden;
       height: 100%;
+      min-height: 0;
     }
 
     .sidebar-scroll {
       height: 100%;
       overflow-y: auto;
       padding-right: 0.5rem;
+      min-height: 0;
     }
 
     .sidebar-header {
@@ -531,26 +707,78 @@
   <div id="app">
     <div class="layout">
       <div class="main-column">
-        <div class="video-panel">
-          <div id="video-compare-container">
-            <video id='src' loop autoplay playsinline onclick="video_click()">
-              <source src="resources/2 - 15 sec - 1000 frame - AI Girl Perks - Replacement.mp4">
-              <!-- <source src=/loca/path/to/your/mp4> -->
-            </video>
-            <div id="video-clipper">
-              <video id='tgt' loop autoplay playsinline onclick="video_click()">
-                <source src="resources/2 - 15 sec - 1000 frame - AI Girl Perks.mp4">
-                <!-- <source src=/home/yun/out2.mp4> -->
+        <div class="player-shell">
+          <div class="video-panel">
+            <div id="video-compare-container">
+              <video id='src' loop autoplay playsinline onclick="video_click()">
+                <source src="resources/2 - 15 sec - 1000 frame - AI Girl Perks - Replacement.mp4">
+                <!-- <source src=/loca/path/to/your/mp4> -->
               </video>
-              <div id="left-pad" class="pad-overlay"></div>
+              <div id="video-clipper">
+                <video id='tgt' loop autoplay playsinline onclick="video_click()">
+                  <source src="resources/2 - 15 sec - 1000 frame - AI Girl Perks.mp4">
+                  <!-- <source src=/home/yun/out2.mp4> -->
+                </video>
+                <div id="left-pad" class="pad-overlay"></div>
+              </div>
+              <div id="right-pad" class="pad-overlay"></div>
+              <div id="mute-overlay" class="mute-overlay" aria-label="Click to unmute" role="button" tabindex="0">
+                <div class="icon">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"></path>
+                    <path d="M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                  </svg>
+                </div>
+              </div>
+              <div id="fullscreen-tip" class="fullscreen-tip">Press ESC to exit fullscreen</div>
             </div>
-            <div id="right-pad" class="pad-overlay"></div>
-            <div id="mute-overlay" class="mute-overlay" aria-label="Click to unmute" role="button" tabindex="0">
-              <div class="icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"></path>
-                  <path d="M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                </svg>
+          </div>
+          <div class="transport">
+            <div class="transport-scrub">
+              <input id="master-scrubber" type="range" min="0" max="0" step="0.01" value="0">
+              <div class="transport-time">
+                <span id="master-current">0:00</span>
+                <span id="master-duration">0:00</span>
+              </div>
+            </div>
+            <div class="transport-controls">
+              <div class="transport-left">
+                <button id="master-play" class="icon-button" type="button" aria-label="Play/Pause" data-playing="false">
+                  <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5l11 7-11 7V5z" fill="currentColor"></path>
+                  </svg>
+                  <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="transport-center">
+                <div class="speed-buttons" role="group" aria-label="Playback speed">
+                  <button class="speed-option" type="button" data-rate="0.25">0.25x</button>
+                  <button class="speed-option" type="button" data-rate="0.5">0.5x</button>
+                  <button class="speed-option" type="button" data-rate="0.75">0.75x</button>
+                  <button class="speed-option active" type="button" data-rate="1">1.0x</button>
+                  <button class="speed-option" type="button" data-rate="1.25">1.25x</button>
+                  <button class="speed-option" type="button" data-rate="1.75">1.75x</button>
+                  <button class="speed-option" type="button" data-rate="2">2.0x</button>
+                </div>
+              </div>
+              <div class="transport-right">
+                <button id="lock-split" class="icon-button" type="button" aria-label="Lock comparison split" data-locked="false" title="Lock split position">
+                  <svg class="icon-lock-open" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 10V7a5 5 0 1 1 10 0h-2a3 3 0 0 0-6 0v3H7z" fill="currentColor"></path>
+                    <rect x="5" y="10" width="14" height="10" rx="2" fill="currentColor"></rect>
+                  </svg>
+                  <svg class="icon-lock-closed" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 10V7a5 5 0 0 1 10 0v3h-2V7a3 3 0 0 0-6 0v3H7z" fill="currentColor"></path>
+                    <rect x="5" y="10" width="14" height="10" rx="2" fill="currentColor"></rect>
+                  </svg>
+                </button>
+                <button id="master-fullscreen" class="icon-button" type="button" aria-label="Toggle fullscreen">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9V4h5v2H6v3H4zm10-5h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm14 0h2v6h-6v-2h4v-4z" fill="currentColor"></path>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
@@ -771,6 +999,24 @@
     var rightPreview = document.getElementById("right-preview");
     var leftLoopPriority = document.getElementById("left-loop-priority");
     var rightLoopPriority = document.getElementById("right-loop-priority");
+    var masterScrubber = document.getElementById("master-scrubber");
+    var masterCurrent = document.getElementById("master-current");
+    var masterDurationLabel = document.getElementById("master-duration");
+    var masterPlayButton = document.getElementById("master-play");
+    var masterFullscreen = document.getElementById("master-fullscreen");
+    var fullscreenTip = document.getElementById("fullscreen-tip");
+    var lockSplitButton = document.getElementById("lock-split");
+    var speedButtons = document.querySelectorAll(".speed-option");
+    var playbackRate = 1;
+    var isScrubbing = false;
+    var fullscreenTimer = null;
+    var fullscreenActive = false;
+    var fullscreenControlsVisible = false;
+    var fullscreenHideTimer = null;
+    var fullscreenMoveHandler = null;
+    var scrubRAF = null;
+    var scrubPending = null;
+    var isSplitLocked = false;
 
     var leftObjectUrl = null;
     var rightObjectUrl = null;
@@ -957,6 +1203,32 @@
       return Math.min(Math.max(value, min), max);
     }
 
+    function formatTime(seconds) {
+      if (!isFinite(seconds) || seconds <= 0) {
+        return "0:00";
+      }
+      var total = Math.floor(seconds);
+      var minutes = Math.floor(total / 60);
+      var secs = total % 60;
+      return minutes + ":" + (secs < 10 ? "0" + secs : secs);
+    }
+
+    function updateTransportUI() {
+      var duration = isFinite(masterDuration) ? masterDuration : 0;
+      var current = isFinite(masterTime) ? masterTime : 0;
+      if (isScrubbing) {
+        current = parseNumber(masterScrubber.value, current);
+      }
+      masterCurrent.textContent = formatTime(current);
+      masterDurationLabel.textContent = formatTime(duration);
+      masterPlayButton.dataset.playing = isPlaying ? "true" : "false";
+      if (!isScrubbing) {
+        masterScrubber.max = duration > 0 ? duration.toFixed(2) : "0";
+        masterScrubber.value = duration > 0 ? clamp(current, 0, duration).toFixed(2) : "0";
+      }
+      masterScrubber.disabled = !(duration > 0);
+    }
+
     function getSegment(video, startInput, endInput) {
       if (!isFinite(video.duration) || video.duration <= 0) {
         return { start: 0, end: 0, length: 0, duration: 0 };
@@ -1127,6 +1399,7 @@
       prevRightPadActive = rightPadActive;
       prevLeftPadActive = leftPadActive;
       updateAudioState(rightPadActive, leftPadActive);
+      updateTransportUI();
       if (force) {
         dbg("syncFromMaster", {
           rightPadActive: rightPadActive,
@@ -1683,6 +1956,112 @@
       syncFromMaster(true);
     });
 
+    masterPlayButton.addEventListener("click", function () {
+      if (isPlaying) {
+        pauseMaster();
+      } else {
+        requestPlayMaster("transport-play");
+      }
+    });
+
+    masterScrubber.addEventListener("input", function () {
+      isScrubbing = true;
+      scrubPending = parseNumber(masterScrubber.value, 0);
+      updateTransportUI();
+      if (!scrubRAF) {
+        scrubRAF = requestAnimationFrame(function () {
+          scrubRAF = null;
+          if (scrubPending !== null) {
+            seekMaster(scrubPending);
+          }
+        });
+      }
+    });
+
+    masterScrubber.addEventListener("pointerdown", function () {
+      isScrubbing = true;
+    });
+
+    masterScrubber.addEventListener("pointerup", function () {
+      isScrubbing = false;
+      seekMaster(parseNumber(masterScrubber.value, 0));
+    });
+
+    masterScrubber.addEventListener("change", function () {
+      isScrubbing = false;
+      seekMaster(parseNumber(masterScrubber.value, 0));
+    });
+
+    speedButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        var rate = parseNumber(button.dataset.rate, 1);
+        playbackRate = rate > 0 ? rate : 1;
+        v.playbackRate = playbackRate;
+        v2.playbackRate = playbackRate;
+        speedButtons.forEach(function (item) {
+          item.classList.toggle("active", item === button);
+        });
+      });
+    });
+
+    lockSplitButton.addEventListener("click", function () {
+      isSplitLocked = !isSplitLocked;
+      lockSplitButton.dataset.locked = isSplitLocked ? "true" : "false";
+      if (isSplitLocked) {
+        lockSplitButton.classList.add("active");
+      } else {
+        lockSplitButton.classList.remove("active");
+      }
+    });
+
+    masterFullscreen.addEventListener("click", function () {
+      var container = document.querySelector(".player-shell");
+      if (!document.fullscreenElement) {
+        if (container.requestFullscreen) {
+          container.requestFullscreen();
+        }
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    });
+
+    document.addEventListener("fullscreenchange", function () {
+      var container = document.querySelector(".player-shell");
+      if (document.fullscreenElement === container) {
+        fullscreenActive = true;
+        document.body.classList.add("fullscreen-active");
+        setFullscreenControlsVisible(true);
+        fullscreenTip.classList.add("visible");
+        if (fullscreenTimer) {
+          clearTimeout(fullscreenTimer);
+        }
+        fullscreenTimer = setTimeout(function () {
+          fullscreenTip.classList.remove("visible");
+        }, 1400);
+        fullscreenMoveHandler = handleFullscreenMove;
+        document.addEventListener("mousemove", fullscreenMoveHandler);
+        document.addEventListener("mousemove", function () {
+          if (fullscreenActive) {
+            setFullscreenControlsVisible(true);
+            scheduleFullscreenHide(1800);
+          }
+        }, { once: true });
+        scheduleFullscreenHide(600);
+      } else {
+        fullscreenActive = false;
+        document.body.classList.remove("fullscreen-active");
+        setFullscreenControlsVisible(false);
+        if (fullscreenMoveHandler) {
+          document.removeEventListener("mousemove", fullscreenMoveHandler);
+          fullscreenMoveHandler = null;
+        }
+        if (fullscreenHideTimer) {
+          clearTimeout(fullscreenHideTimer);
+          fullscreenHideTimer = null;
+        }
+      }
+    });
+
     [leftClipStart, leftClipEnd, rightClipStart, rightClipEnd].forEach(function (input) {
       input.addEventListener("input", function () {
         pauseMaster();
@@ -1794,6 +2173,7 @@
       primeThumbs();
       updateMuteOverlay();
       updateClipLabels();
+      updateTransportUI();
       requestAnimationFrame(function () {
         updateTrimUI("left");
         updateTrimUI("right");
@@ -1921,8 +2301,8 @@
       var masterSide = getMasterSide();
       var masterVideo = masterSide === "right" ? v : v2;
       var otherVideo = masterSide === "right" ? v2 : v;
-      masterVideo.playbackRate = 1;
-      otherVideo.playbackRate = 1;
+      masterVideo.playbackRate = playbackRate;
+      otherVideo.playbackRate = playbackRate;
       if (!isPlaying) {
         isPlaying = true;
         lastTick = null;
@@ -1959,10 +2339,75 @@
       playToken += 1;
       v.pause();
       v2.pause();
+      updateTransportUI();
     }
 
     function setMasterFromRight() {
       // Deprecated: master time now derived from the prioritized video in syncFromMaster.
+    }
+
+    function setFullscreenControlsVisible(visible) {
+      fullscreenControlsVisible = visible;
+      if (visible) {
+        document.body.classList.add("fullscreen-controls-visible");
+      } else {
+        document.body.classList.remove("fullscreen-controls-visible");
+      }
+    }
+
+    function scheduleFullscreenHide(delay) {
+      if (fullscreenHideTimer) {
+        clearTimeout(fullscreenHideTimer);
+      }
+      fullscreenHideTimer = setTimeout(function () {
+        setFullscreenControlsVisible(false);
+      }, delay);
+    }
+
+    function handleFullscreenMove(event) {
+      if (!fullscreenActive) {
+        return;
+      }
+      var threshold = window.innerHeight - 120;
+      if (event.clientY >= threshold) {
+        setFullscreenControlsVisible(true);
+        scheduleFullscreenHide(2000);
+      } else {
+        scheduleFullscreenHide(500);
+      }
+    }
+
+    function seekMaster(targetSeconds) {
+      updateMasterDuration();
+      var masterSide = getMasterSide();
+      var masterVideo = masterSide === "right" ? v : v2;
+      var masterSeg = masterSide === "right" ? getSegment(v, rightClipStart, rightClipEnd) : getSegment(v2, leftClipStart, leftClipEnd);
+      var masterOffset = masterSide === "right" ? parseNumber(rightOffset.value, 0) : parseNumber(leftOffset.value, 0);
+      var otherVideo = masterSide === "right" ? v2 : v;
+      var otherSeg = masterSide === "right" ? getSegment(v2, leftClipStart, leftClipEnd) : getSegment(v, rightClipStart, rightClipEnd);
+      var otherOffset = masterSide === "right" ? parseNumber(leftOffset.value, 0) : parseNumber(rightOffset.value, 0);
+      if (!(masterSeg.length > 0)) {
+        return;
+      }
+      var target = masterSeg.start + wrapTime(targetSeconds + masterOffset, masterSeg.length);
+      masterVideo.currentTime = target;
+      if (otherSeg.length > 0) {
+        var otherRelative = targetSeconds + otherOffset;
+        var otherTarget = otherSeg.start;
+        if (otherRelative < 0) {
+          otherTarget = otherSeg.start;
+        } else if (otherRelative >= otherSeg.length) {
+          otherTarget = Math.max(otherSeg.start, otherSeg.end - 0.02);
+        } else {
+          otherTarget = otherSeg.start + otherRelative;
+        }
+        otherVideo.currentTime = otherTarget;
+      }
+      masterTime = wrapTime(targetSeconds, masterSeg.length);
+      syncFromMaster(true);
+      if (isPlaying && masterVideo.paused) {
+        masterVideo.play().catch(function () {});
+      }
     }
 
     var videoContainer = document.getElementById("video-compare-container"),
@@ -1970,6 +2415,9 @@
     clippedVideo = videoClipper.getElementsByTagName("video")[0];
 
     function trackLocation(e) {
+      if (isSplitLocked) {
+        return;
+      }
       var rect = videoContainer.getBoundingClientRect(),
         position = ((e.pageX - rect.left) / videoContainer.offsetWidth) * 100;
       if (position <= 100) {
