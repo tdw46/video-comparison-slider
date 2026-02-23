@@ -2,31 +2,6 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <script>
-    (function () {
-      try {
-        var host = window.location.hostname;
-        var isLocal =
-          host === "localhost" ||
-          host === "127.0.0.1" ||
-          /^192\.168\./.test(host) ||
-          /^10\./.test(host) ||
-          /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
-        if (isLocal) {
-          var url = new URL(window.location.href);
-          if (!url.searchParams.has("v")) {
-            url.searchParams.set("v", String(Date.now()));
-            window.location.replace(url.toString());
-          }
-        }
-      } catch (error) {
-        // ignore cache-buster failures
-      }
-    })();
-  </script>
   <script>
     (function () {
       try {
@@ -264,6 +239,18 @@
       display: block;
     }
 
+    #master-mute .icon-muted {
+      display: none;
+    }
+
+    #master-mute[data-muted="true"] .icon-unmuted {
+      display: none;
+    }
+
+    #master-mute[data-muted="true"] .icon-muted {
+      display: block;
+    }
+
     .speed-buttons {
       display: flex;
       align-items: center;
@@ -320,6 +307,46 @@
 
     .fullscreen-tip.visible {
       opacity: 1;
+    }
+
+    .play-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.25);
+      color: #ffffff;
+      font-size: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.75s ease;
+      z-index: 5;
+    }
+
+    .play-overlay .icon {
+      width: 96px;
+      height: 96px;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+    }
+
+    .play-overlay svg {
+      width: 46px;
+      height: 46px;
+    }
+
+    .play-overlay.visible {
+      opacity: 1;
+    }
+
+    .play-overlay.instant {
+      transition: none;
     }
 
     body.fullscreen-active .transport {
@@ -1013,6 +1040,7 @@
 
     html.mobile-ui #master-play,
     html.mobile-ui #lock-split,
+    html.mobile-ui #master-mute,
     html.mobile-ui #master-fullscreen {
       width: 38px;
       height: 38px;
@@ -1020,6 +1048,7 @@
 
     html.mobile-ui #master-play svg,
     html.mobile-ui #lock-split svg,
+    html.mobile-ui #master-mute svg,
     html.mobile-ui #master-fullscreen svg {
       width: 18px;
       height: 18px;
@@ -1096,18 +1125,28 @@
                 </video>
                 <div id="left-pad" class="pad-overlay"></div>
               </div>
-              <div id="right-pad" class="pad-overlay"></div>
-              <div id="mute-overlay" class="mute-overlay" aria-label="Click to unmute" role="button" tabindex="0">
-                <div class="icon">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"></path>
-                    <path d="M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                  </svg>
-                </div>
+            <div id="right-pad" class="pad-overlay"></div>
+            <div id="mute-overlay" class="mute-overlay" aria-label="Click to unmute" role="button" tabindex="0">
+              <div class="icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"></path>
+                  <path d="M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                </svg>
               </div>
-              <div id="fullscreen-tip" class="fullscreen-tip">Press ESC to exit fullscreen</div>
             </div>
+            <div id="play-overlay" class="play-overlay" aria-hidden="true">
+              <div class="icon">
+                <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 5l11 7-11 7V5z" fill="currentColor"></path>
+                </svg>
+                <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"></path>
+                </svg>
+              </div>
+            </div>
+            <div id="fullscreen-tip" class="fullscreen-tip">Press ESC to exit fullscreen</div>
           </div>
+        </div>
           <div class="transport">
             <div class="transport-scrub">
               <input id="master-scrubber" type="range" min="0" max="0" step="0.01" value="0">
@@ -1124,6 +1163,16 @@
                   </svg>
                   <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"></path>
+                  </svg>
+                </button>
+                <button id="lock-split" class="icon-button" type="button" aria-label="Lock comparison split" data-locked="false" title="Lock split position">
+                  <svg class="icon-lock-open" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 10V7a5 5 0 1 1 10 0h-2a3 3 0 0 0-6 0v3H7z" fill="currentColor"></path>
+                    <rect x="5" y="10" width="14" height="10" rx="2" fill="currentColor"></rect>
+                  </svg>
+                  <svg class="icon-lock-closed" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 10V7a5 5 0 0 1 10 0v3h-2V7a3 3 0 0 0-6 0v3H7z" fill="currentColor"></path>
+                    <rect x="5" y="10" width="14" height="10" rx="2" fill="currentColor"></rect>
                   </svg>
                 </button>
               </div>
@@ -1148,14 +1197,14 @@
                 </select>
               </div>
               <div class="transport-right">
-                <button id="lock-split" class="icon-button" type="button" aria-label="Lock comparison split" data-locked="false" title="Lock split position">
-                  <svg class="icon-lock-open" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M7 10V7a5 5 0 1 1 10 0h-2a3 3 0 0 0-6 0v3H7z" fill="currentColor"></path>
-                    <rect x="5" y="10" width="14" height="10" rx="2" fill="currentColor"></rect>
+                <button id="master-mute" class="icon-button" type="button" aria-label="Mute/Unmute" data-muted="true">
+                  <svg class="icon-unmuted" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"></path>
+                    <path d="M16 8a4 4 0 0 1 0 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
                   </svg>
-                  <svg class="icon-lock-closed" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M7 10V7a5 5 0 0 1 10 0v3h-2V7a3 3 0 0 0-6 0v3H7z" fill="currentColor"></path>
-                    <rect x="5" y="10" width="14" height="10" rx="2" fill="currentColor"></rect>
+                  <svg class="icon-muted" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"></path>
+                    <path d="M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
                   </svg>
                 </button>
                 <button id="master-fullscreen" class="icon-button" type="button" aria-label="Toggle fullscreen">
@@ -1389,7 +1438,9 @@
     var masterPlayButton = document.getElementById("master-play");
     var masterFullscreen = document.getElementById("master-fullscreen");
     var fullscreenTip = document.getElementById("fullscreen-tip");
+    var playOverlay = document.getElementById("play-overlay");
     var lockSplitButton = document.getElementById("lock-split");
+    var masterMuteButton = document.getElementById("master-mute");
     var speedButtons = document.querySelectorAll(".speed-option");
     var speedSelect = document.getElementById("speed-select");
     var playbackRate = 1;
@@ -1607,6 +1658,9 @@
       masterCurrent.textContent = formatTime(current);
       masterDurationLabel.textContent = formatTime(duration);
       masterPlayButton.dataset.playing = isPlaying ? "true" : "false";
+      if (masterMuteButton) {
+        masterMuteButton.dataset.muted = audioUnlocked ? "false" : "true";
+      }
       if (!isScrubbing) {
         masterScrubber.max = duration > 0 ? duration.toFixed(2) : "0";
         masterScrubber.value = duration > 0 ? clamp(current, 0, duration).toFixed(2) : "0";
@@ -2099,8 +2153,8 @@
       if (!video.videoWidth || !video.videoHeight) {
         return null;
       }
-      var sampleWidth = 32;
-      var sampleHeight = 18;
+      var sampleWidth = isMobileUiActive() ? 16 : 32;
+      var sampleHeight = isMobileUiActive() ? 9 : 18;
       glowCanvas.width = sampleWidth;
       glowCanvas.height = sampleHeight;
       var data;
@@ -2153,7 +2207,7 @@
     }
 
     function startGlowLoop(video) {
-      if (video.requestVideoFrameCallback) {
+      if (!isMobileUiActive() && video.requestVideoFrameCallback) {
         var tick = function () {
           if (!video.paused) {
             updateGlowFromVideos();
@@ -2170,7 +2224,7 @@
         if (!video.paused) {
           updateGlowFromVideos();
         }
-      }, 120);
+      }, isMobileUiActive() ? 250 : 120);
     }
 
     function setVideoSource(video, file, side) {
@@ -2344,8 +2398,10 @@
     masterPlayButton.addEventListener("click", function () {
       if (isPlaying) {
         pauseMaster();
+        showPlayPauseOverlay(false);
       } else {
         requestPlayMaster("transport-play");
+        showPlayPauseOverlay(true);
       }
     });
 
@@ -2413,6 +2469,19 @@
         lockSplitButton.classList.remove("active");
       }
     });
+
+    if (masterMuteButton) {
+      masterMuteButton.addEventListener("click", function () {
+        if (audioUnlocked) {
+          audioUnlocked = false;
+          updateAudioState(prevRightPadActive, prevLeftPadActive);
+          updateMuteOverlay();
+        } else {
+          unmuteEnabled();
+        }
+        updateTransportUI();
+      });
+    }
 
     masterFullscreen.addEventListener("click", function () {
       var container = document.querySelector(".player-shell");
@@ -2652,9 +2721,11 @@
     function video_click() {
       if (!isPlaying){
         requestPlayMaster("toggle-play");
+        showPlayPauseOverlay(true);
       }
       else{
         pauseMaster();
+        showPlayPauseOverlay(false);
       }
     }
 
@@ -2744,6 +2815,33 @@
 
     function setMasterFromRight() {
       // Deprecated: master time now derived from the prioritized video in syncFromMaster.
+    }
+
+    function showPlayPauseOverlay(isNowPlaying) {
+      if (!playOverlay) {
+        return;
+      }
+      playOverlay.classList.add("instant");
+      playOverlay.classList.add("visible");
+      var playIcon = playOverlay.querySelector(".icon-play");
+      var pauseIcon = playOverlay.querySelector(".icon-pause");
+      if (playIcon && pauseIcon) {
+        playIcon.style.display = isNowPlaying ? "none" : "block";
+        pauseIcon.style.display = isNowPlaying ? "block" : "none";
+      }
+      if (showPlayPauseOverlay.raf) {
+        cancelAnimationFrame(showPlayPauseOverlay.raf);
+      }
+      showPlayPauseOverlay.raf = requestAnimationFrame(function () {
+        playOverlay.classList.remove("instant");
+        requestAnimationFrame(function () {
+          playOverlay.classList.remove("visible");
+        });
+      });
+    }
+
+    function isMobileUiActive() {
+      return document.documentElement.classList.contains("mobile-ui");
     }
 
     function setFullscreenControlsVisible(visible) {
