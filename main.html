@@ -40,11 +40,6 @@
       --text: #f1f1f1;
       --muted: #a3a3a3;
       --accent: #ff3d3d;
-      --glow-r: 255;
-      --glow-g: 61;
-      --glow-b: 61;
-      --glow-soft: rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.18);
-      --glow-strong: rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.35);
       --shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
       --radius: 16px;
     }
@@ -87,7 +82,6 @@
       position: fixed;
       inset: 0;
       background:
-        radial-gradient(800px 520px at 18% 12%, var(--glow-soft), transparent 60%),
         radial-gradient(900px 600px at 85% 18%, rgba(255, 255, 255, 0.04), transparent 60%);
       pointer-events: none;
       z-index: 0;
@@ -1453,13 +1447,19 @@
     var scrubRAF = null;
     var scrubPending = null;
     var isSplitLocked = false;
+    var lastOtherSync = 0;
+    var lastMasterTime = 0;
+    var transientMuteRightUntil = 0;
+    var transientMuteLeftUntil = 0;
+    var mobileAutoplayArmed = false;
+    var mobileReadyLeft = false;
+    var mobileReadyRight = false;
+    var mobileAutoplayFallback = null;
+    var forceOtherSync = false;
 
     var leftObjectUrl = null;
     var rightObjectUrl = null;
-    var glowCanvas = document.createElement("canvas");
-    var glowContext = glowCanvas.getContext("2d", { willReadFrequently: true });
     var autoplayAttempted = false;
-    var glowInterval = null;
     var lastRightOffset = 0;
     var masterTime = 0;
     var masterDuration = 0;
@@ -1552,8 +1552,9 @@
       var rightEnabled = isAudioEnabled(rightAudio);
       var leftEnabled = isAudioEnabled(leftAudio);
       var allowAudio = audioUnlocked;
-      var desiredRightMuted = !allowAudio || rightPadActive || !rightEnabled;
-      var desiredLeftMuted = !allowAudio || leftPadActive || !leftEnabled;
+      var now = performance.now();
+      var desiredRightMuted = !allowAudio || rightPadActive || !rightEnabled || now < transientMuteRightUntil;
+      var desiredLeftMuted = !allowAudio || leftPadActive || !leftEnabled || now < transientMuteLeftUntil;
       if (v.muted !== desiredRightMuted) {
         v.muted = desiredRightMuted;
       }
@@ -1783,6 +1784,8 @@
       }
 
       masterTime = wrapTime(masterVideo.currentTime - masterSeg.start - masterOffset, masterLen);
+      var looped = masterLen > 0 && lastMasterTime > masterLen * 0.7 && masterTime < masterLen * 0.3;
+      lastMasterTime = masterTime;
       var masterTarget = masterSeg.start + wrapTime(masterTime + masterOffset, masterLen);
       if (masterVideo.currentTime < masterSeg.start || masterVideo.currentTime > masterSeg.end + 0.02) {
         masterVideo.currentTime = masterTarget;
@@ -1816,9 +1819,35 @@
 
       if (otherLen > 0) {
         var drift = Math.abs(otherVideo.currentTime - desiredOther);
-        var driftThreshold = 0.12;
-        if (force || drift > driftThreshold) {
-          otherVideo.currentTime = desiredOther;
+        var driftThreshold = isMobileUiActive() ? 0.28 : 0.12;
+        var now = performance.now();
+        var minInterval = isMobileUiActive() ? 200 : 0;
+        var shouldForceOther = forceOtherSync || (force && !(isMobileUiActive() && audioUnlocked));
+        if (looped && isMobileUiActive()) {
+          if (typeof otherVideo.fastSeek === "function") {
+            otherVideo.fastSeek(desiredOther);
+          } else {
+            otherVideo.currentTime = desiredOther;
+          }
+          lastOtherSync = now;
+          if (audioUnlocked) {
+            if (masterSide === "right") {
+              if (isAudioEnabled(leftAudio)) {
+                transientMuteLeftUntil = now + 180;
+              }
+            } else {
+              if (isAudioEnabled(rightAudio)) {
+                transientMuteRightUntil = now + 180;
+              }
+            }
+          }
+        } else if (shouldForceOther || (drift > driftThreshold && (minInterval === 0 || (now - lastOtherSync) > minInterval))) {
+          if (typeof otherVideo.fastSeek === "function") {
+            otherVideo.fastSeek(desiredOther);
+          } else {
+            otherVideo.currentTime = desiredOther;
+          }
+          lastOtherSync = now;
         }
       }
 
@@ -2147,84 +2176,6 @@
         // Ignore seek errors on short or not-ready videos.
       }
       thumbVideo.pause();
-    }
-
-    function sampleVideoColor(video) {
-      if (!video.videoWidth || !video.videoHeight) {
-        return null;
-      }
-      var sampleWidth = isMobileUiActive() ? 16 : 32;
-      var sampleHeight = isMobileUiActive() ? 9 : 18;
-      glowCanvas.width = sampleWidth;
-      glowCanvas.height = sampleHeight;
-      var data;
-      try {
-        glowContext.drawImage(video, 0, 0, sampleWidth, sampleHeight);
-        data = glowContext.getImageData(0, 0, sampleWidth, sampleHeight).data;
-      } catch (error) {
-        return null;
-      }
-      var r = 0;
-      var g = 0;
-      var b = 0;
-      var count = data.length / 4;
-      for (var i = 0; i < data.length; i += 4) {
-        r += data[i];
-        g += data[i + 1];
-        b += data[i + 2];
-      }
-      return [r / count, g / count, b / count];
-    }
-
-    function updateGlowFromVideos() {
-      var rightColor = sampleVideoColor(v);
-      var leftColor = sampleVideoColor(v2);
-      if (!rightColor && !leftColor) {
-        return;
-      }
-      var r = 0;
-      var g = 0;
-      var b = 0;
-      var count = 0;
-      if (rightColor) {
-        r += rightColor[0];
-        g += rightColor[1];
-        b += rightColor[2];
-        count += 1;
-      }
-      if (leftColor) {
-        r += leftColor[0];
-        g += leftColor[1];
-        b += leftColor[2];
-        count += 1;
-      }
-      r = Math.round(r / count);
-      g = Math.round(g / count);
-      b = Math.round(b / count);
-      document.documentElement.style.setProperty("--glow-r", r);
-      document.documentElement.style.setProperty("--glow-g", g);
-      document.documentElement.style.setProperty("--glow-b", b);
-    }
-
-    function startGlowLoop(video) {
-      if (!isMobileUiActive() && video.requestVideoFrameCallback) {
-        var tick = function () {
-          if (!video.paused) {
-            updateGlowFromVideos();
-          }
-          video.requestVideoFrameCallback(tick);
-        };
-        video.requestVideoFrameCallback(tick);
-        return;
-      }
-      if (glowInterval) {
-        clearInterval(glowInterval);
-      }
-      glowInterval = setInterval(function () {
-        if (!video.paused) {
-          updateGlowFromVideos();
-        }
-      }, isMobileUiActive() ? 250 : 120);
     }
 
     function setVideoSource(video, file, side) {
@@ -2646,7 +2597,17 @@
     }
 
     window.addEventListener("load", function () {
-      attemptAutoplay(false);
+      if (!isMobileUiActive()) {
+        attemptAutoplay(false);
+      } else {
+        mobileAutoplayArmed = true;
+        mobileAutoplayFallback = setTimeout(function () {
+          if (mobileAutoplayArmed) {
+            mobileAutoplayArmed = false;
+            attemptAutoplay(false);
+          }
+        }, 1200);
+      }
       primeThumbs();
       updateMuteOverlay();
       updateClipLabels();
@@ -2673,9 +2634,12 @@
       setThumbSource(rightThumb, getVideoSrc(v));
       setPreviewSource(rightPreview, getVideoSrc(v));
       scheduleStripBuild("right", true);
-      attemptAutoplay(true);
-      updateGlowFromVideos();
-      startGlowLoop(v);
+      if (isMobileUiActive()) {
+        mobileReadyRight = true;
+        maybeStartMobileAutoplay("right-ready");
+      } else {
+        attemptAutoplay(true);
+      }
       updateMuteOverlay();
       lastRightOffset = parseFloat(rightOffset.value || "0");
       ensureClipDefaults(v, rightClipStart, rightClipEnd);
@@ -2692,7 +2656,12 @@
       setThumbSource(leftThumb, getVideoSrc(v2));
       setPreviewSource(leftPreview, getVideoSrc(v2));
       scheduleStripBuild("left", true);
-      attemptAutoplay(true);
+      if (isMobileUiActive()) {
+        mobileReadyLeft = true;
+        maybeStartMobileAutoplay("left-ready");
+      } else {
+        attemptAutoplay(true);
+      }
       updateMuteOverlay();
       ensureClipDefaults(v2, leftClipStart, leftClipEnd);
       leftClipStart.value = "0";
@@ -2777,6 +2746,21 @@
       playToken += 1;
       var token = playToken;
       dbg("playMaster", { token: token, masterDuration: masterDuration, masterTime: masterTime });
+      if (isMobileUiActive()) {
+        var seekTarget = parseNumber(masterScrubber.value, masterTime);
+        seekMaster(seekTarget);
+        if (audioUnlocked) {
+          var now = performance.now();
+          var masterSide = getMasterSide();
+          if (masterSide === "right") {
+            if (isAudioEnabled(leftAudio)) {
+              transientMuteLeftUntil = now + 180;
+            }
+          } else if (isAudioEnabled(rightAudio)) {
+            transientMuteRightUntil = now + 180;
+          }
+        }
+      }
       var masterSide = getMasterSide();
       var masterVideo = masterSide === "right" ? v : v2;
       var otherVideo = masterSide === "right" ? v2 : v;
@@ -2852,6 +2836,30 @@
       return document.documentElement.classList.contains("mobile-ui");
     }
 
+    function maybeStartMobileAutoplay(reason) {
+      if (!isMobileUiActive()) {
+        return;
+      }
+      if (!mobileAutoplayArmed || !mobileReadyLeft || !mobileReadyRight) {
+        return;
+      }
+      mobileAutoplayArmed = false;
+      if (mobileAutoplayFallback) {
+        clearTimeout(mobileAutoplayFallback);
+        mobileAutoplayFallback = null;
+      }
+      try {
+        v.currentTime = parseNumber(rightClipStart.value, 0);
+      } catch (error) {}
+      try {
+        v2.currentTime = parseNumber(leftClipStart.value, 0);
+      } catch (error) {}
+      syncFromMaster(true);
+      setTimeout(function () {
+        attemptAutoplay(true);
+      }, 200);
+    }
+
     function setFullscreenControlsVisible(visible) {
       fullscreenControlsVisible = visible;
       if (visible) {
@@ -2910,7 +2918,9 @@
         otherVideo.currentTime = otherTarget;
       }
       masterTime = wrapTime(targetSeconds, masterSeg.length);
+      forceOtherSync = true;
       syncFromMaster(true);
+      forceOtherSync = false;
       if (isPlaying && masterVideo.paused) {
         masterVideo.play().catch(function () {});
       }
