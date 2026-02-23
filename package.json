@@ -1,0 +1,8 @@
+﻿{
+  "name": "video-comparison-slider",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm dlx http-server -c-1 -p 5173 -a 0.0.0.0 -o /main.html ."
+  }
+}
