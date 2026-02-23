@@ -2276,12 +2276,14 @@
     updateClipLabels();
 
     leftAudio.addEventListener("click", function () {
-      setAudioEnabled(leftAudio, !isAudioEnabled(leftAudio));
+      var next = !isAudioEnabled(leftAudio);
+      setAudioEnabled(leftAudio, next);
       applyAudioSettings();
     });
 
     rightAudio.addEventListener("click", function () {
-      setAudioEnabled(rightAudio, !isAudioEnabled(rightAudio));
+      var next = !isAudioEnabled(rightAudio);
+      setAudioEnabled(rightAudio, next);
       applyAudioSettings();
     });
     applyAudioSettings();
@@ -2635,6 +2637,12 @@
       scheduleStripBuild("right", true);
       ensureClipDefaults(v2, leftClipStart, leftClipEnd);
       ensureClipDefaults(v, rightClipStart, rightClipEnd);
+      if (isMobileUiActive()) {
+        v.preload = "auto";
+        v2.preload = "auto";
+        v.load();
+        v2.load();
+      }
     }
 
     window.addEventListener("load", function () {
